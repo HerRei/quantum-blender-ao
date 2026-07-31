@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HerRei/quantum-minecraft-rendering/schemas/lighting-request.schema.json",
+  "title": "LightingRequest v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "voxel_dimensions",
+    "voxel_data",
+    "coordinate_frame",
+    "query",
+    "direction_count",
+    "algorithm",
+    "seed",
+    "desired_accuracy",
+    "confidence_level",
+    "max_oracle_calls"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "format": "uuid"},
+    "voxel_dimensions": {"$ref": "#/$defs/dimensions"},
+    "voxel_data": {"$ref": "#/$defs/voxelData"},
+    "coordinate_frame": {"$ref": "#/$defs/coordinateFrame"},
+    "query": {"$ref": "#/$defs/query"},
+    "direction_count": {"enum": [8, 16, 32, 64]},
+    "algorithm": {
+      "enum": ["mock", "exact", "classical_monte_carlo", "cpu_quantum", "intel_gpu"]
+    },
+    "seed": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+    "desired_accuracy": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+    "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+    "max_oracle_calls": {"type": "integer", "minimum": 1},
+    "ray_max_distance": {"type": "number", "exclusiveMinimum": 0, "default": 128.0},
+    "metadata": {"type": "object", "additionalProperties": true}
+  },
+  "$defs": {
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"type": "integer", "minimum": 1, "maximum": 128},
+        "y": {"type": "integer", "minimum": 1, "maximum": 128},
+        "z": {"type": "integer", "minimum": 1, "maximum": 128}
+      }
+    },
+    "vector3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number"}
+      }
+    },
+    "intVector3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"type": "integer"},
+        "y": {"type": "integer"},
+        "z": {"type": "integer"}
+      }
+    },
+    "voxelData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["encoding", "bit_order", "solid", "transparent", "emissive", "emission_values"],
+      "properties": {
+        "encoding": {"const": "bitset-base64"},
+        "bit_order": {"const": "lsb0"},
+        "solid": {"type": "string", "contentEncoding": "base64"},
+        "transparent": {"type": "string", "contentEncoding": "base64"},
+        "emissive": {"type": "string", "contentEncoding": "base64"},
+        "emission_values": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["index", "intensity"],
+            "properties": {
+              "index": {"type": "integer", "minimum": 0},
+              "intensity": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    "coordinateFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin_world_block", "axes", "voxel_size"],
+      "properties": {
+        "origin_world_block": {"$ref": "#/$defs/intVector3"},
+        "axes": {"const": "minecraft_x_east_y_up_z_south"},
+        "voxel_size": {"const": 1.0}
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position_local", "surface_normal"],
+      "properties": {
+        "position_local": {"$ref": "#/$defs/vector3"},
+        "surface_normal": {"$ref": "#/$defs/vector3"}
+      }
+    }
+  }
+}
+

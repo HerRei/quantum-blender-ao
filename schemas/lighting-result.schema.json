@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HerRei/quantum-minecraft-rendering/schemas/lighting-result.schema.json",
+  "title": "LightingResult v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "backend",
+    "estimate",
+    "ground_truth",
+    "absolute_error",
+    "relative_error",
+    "confidence_interval",
+    "qubit_count",
+    "oracle_calls",
+    "shots",
+    "circuit_executions",
+    "circuit_depth",
+    "gate_count",
+    "initialization_ms",
+    "simulation_ms",
+    "transfer_ms",
+    "end_to_end_ms",
+    "warnings",
+    "hardware",
+    "software"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "format": "uuid"},
+    "backend": {"type": "string", "minLength": 1},
+    "estimate": {"type": "number", "minimum": 0, "maximum": 1},
+    "ground_truth": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "absolute_error": {"type": ["number", "null"], "minimum": 0},
+    "relative_error": {"type": ["number", "null"], "minimum": 0},
+    "confidence_interval": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["low", "high", "level", "method"],
+          "properties": {
+            "low": {"type": "number", "minimum": 0, "maximum": 1},
+            "high": {"type": "number", "minimum": 0, "maximum": 1},
+            "level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+            "method": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "qubit_count": {"type": ["integer", "null"], "minimum": 0},
+    "oracle_calls": {"type": "integer", "minimum": 0},
+    "shots": {"type": ["integer", "null"], "minimum": 0},
+    "circuit_executions": {"type": ["integer", "null"], "minimum": 0},
+    "circuit_depth": {"type": ["integer", "null"], "minimum": 0},
+    "gate_count": {"type": ["integer", "null"], "minimum": 0},
+    "initialization_ms": {"type": "number", "minimum": 0},
+    "simulation_ms": {"type": "number", "minimum": 0},
+    "transfer_ms": {"type": ["number", "null"], "minimum": 0},
+    "end_to_end_ms": {"type": "number", "minimum": 0},
+    "peak_memory_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "hardware": {"type": "object", "additionalProperties": true},
+    "software": {"type": "object", "additionalProperties": true},
+    "metadata": {"type": "object", "additionalProperties": true}
+  }
+}
+

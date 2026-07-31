@@ -5,7 +5,7 @@ Carlo sampling, and simulated quantum amplitude estimation on the same small
 voxel scenes. Minecraft is an optional interactive scene source and debug
 visualizer; the scientific core runs independently.
 
-> **Status (2026-07-31): scaffold in progress.** No Minecraft client, target
+> **Status (2026-07-31): data and voxel core implemented; backends in progress.** No Minecraft client, target
 > GPU, Intel GPU backend, or shader integration has been run or validated.
 > Results must be measured; the repository contains no performance claims.
 
@@ -44,8 +44,11 @@ The design does not require AMD-to-Intel peer-to-peer transfers.
 - `docs/`: architecture, setup, methodology, limitations, and paper draft
 - `scripts/`: safe local bootstrap and validation commands
 
+Implemented so far: versioned JSON schemas, bit-packed voxel payloads, stable
+coordinate/index conventions, deterministic hemisphere directions, eight
+synthetic scenes, and a classical 3D-DDA visibility-table builder.
+
 ## License
 
 The repository is private and currently all rights are reserved. See
 [`LICENSE`](LICENSE). A distribution license must be chosen before publication.
-
