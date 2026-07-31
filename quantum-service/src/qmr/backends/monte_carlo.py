@@ -15,6 +15,8 @@ from qmr.raycast import visibility_table
 def wilson_interval(successes: int, samples: int, level: float) -> tuple[float, float]:
     if samples <= 0:
         raise ValueError("samples must be positive")
+    if not 0 <= successes <= samples:
+        raise ValueError("successes must lie between zero and samples")
     z = NormalDist().inv_cdf(0.5 + level / 2)
     proportion = successes / samples
     denominator = 1 + z * z / samples
@@ -24,7 +26,13 @@ def wilson_interval(successes: int, samples: int, level: float) -> tuple[float, 
         * math.sqrt(proportion * (1 - proportion) / samples + z * z / (4 * samples * samples))
         / denominator
     )
-    return max(0.0, center - spread), min(1.0, center + spread)
+    # At the two degenerate samples the corresponding Wilson endpoint is
+    # mathematically exact.  Floating-point cancellation can otherwise turn
+    # zero into a tiny positive value (or one into a value just below one),
+    # incorrectly marking the Bernoulli boundary as uncovered.
+    low = 0.0 if successes == 0 else max(0.0, center - spread)
+    high = 1.0 if successes == samples else min(1.0, center + spread)
+    return low, high
 
 
 class ClassicalMonteCarloBackend:

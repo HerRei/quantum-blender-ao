@@ -44,6 +44,7 @@ from qiskit_algorithms import (  # type: ignore[import-untyped]
 )
 
 from qmr.backends.cpu_quantum import build_estimation_problem, plan_budget
+from qmr.backends.monte_carlo import wilson_interval
 from qmr.models import StrictModel
 
 # isort: off
@@ -357,23 +358,6 @@ def _bernoulli_count(probability: float, samples: int, seed: int) -> int:
     return sum(rng.random() < probability for _ in range(samples))
 
 
-def _wilson_interval(successes: int, samples: int, level: float) -> tuple[float, float]:
-    if samples < 1:
-        raise ValueError("samples must be positive")
-    z_value = NormalDist().inv_cdf(0.5 + level / 2)
-    proportion = successes / samples
-    denominator = 1 + z_value * z_value / samples
-    center = (proportion + z_value * z_value / (2 * samples)) / denominator
-    spread = (
-        z_value
-        * math.sqrt(
-            proportion * (1 - proportion) / samples + z_value * z_value / (4 * samples * samples)
-        )
-        / denominator
-    )
-    return max(0.0, center - spread), min(1.0, center + spread)
-
-
 def _base_analytical_record(
     *,
     config: AuditExperimentConfig,
@@ -511,7 +495,7 @@ def simulate_analytical_records(
                         amplitude, mc_samples, int(mc_record["sampling_seed"])
                     )
                     estimate = successes / mc_samples
-                    low, high = _wilson_interval(successes, mc_samples, config.confidence_level)
+                    low, high = wilson_interval(successes, mc_samples, config.confidence_level)
                     signed_error = estimate - amplitude
                     mc_record.update(
                         {
@@ -1090,7 +1074,7 @@ def _run_classical_runtime_record(
         estimate = successes / design.logical_lookup_oracle_calls
         sampling_completed = perf_counter_ns()
         interval_started = perf_counter_ns()
-        low, high = _wilson_interval(
+        low, high = wilson_interval(
             successes, design.logical_lookup_oracle_calls, config.confidence_level
         )
         completed = perf_counter_ns()

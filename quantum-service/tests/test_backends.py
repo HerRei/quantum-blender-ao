@@ -26,6 +26,7 @@ from qmr.backends.cpu_quantum import (
     build_visibility_operators,
     plan_budget,
 )
+from qmr.backends.monte_carlo import wilson_interval
 from qmr.backends.registry import create_backend
 from qmr.models import Algorithm
 from qmr.scenes import closed_chamber, open_sky, single_wall
@@ -63,6 +64,25 @@ def test_monte_carlo_is_seeded_and_reports_wilson_interval() -> None:
     assert first.oracle_calls == 37
     assert first.confidence_interval is not None
     assert first.confidence_interval.low <= first.estimate <= first.confidence_interval.high
+
+
+@pytest.mark.parametrize(
+    ("successes", "samples", "expected_endpoint"),
+    [(0, 105, ("low", 0.0)), (490, 490, ("high", 1.0))],
+)
+def test_wilson_interval_contains_exact_bernoulli_boundaries(
+    successes: int, samples: int, expected_endpoint: tuple[str, float]
+) -> None:
+    low, high = wilson_interval(successes, samples, 0.95)
+
+    assert {"low": low, "high": high}[expected_endpoint[0]] == expected_endpoint[1]
+    assert low <= successes / samples <= high
+
+
+@pytest.mark.parametrize(("successes", "samples"), [(-1, 10), (11, 10), (0, 0)])
+def test_wilson_interval_rejects_invalid_counts(successes: int, samples: int) -> None:
+    with pytest.raises(ValueError):
+        wilson_interval(successes, samples, 0.95)
 
 
 def test_quantum_budget_is_monotone_and_never_exceeds_limit() -> None:

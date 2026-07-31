@@ -195,6 +195,21 @@ def test_analytical_records_are_deterministic_and_mc_matches_realized_qae_calls(
         assert qae["status"] == mc["status"] == "ok"
 
 
+@pytest.mark.parametrize("numerator", [0, 64])
+def test_analytical_mc_interval_covers_exact_boundaries(numerator: int) -> None:
+    config = _small_config(
+        amplitude_numerators=[numerator],
+        requested_oracle_budgets=[128],
+        analytical_replicates=1,
+    )
+
+    records = simulate_analytical_records(config, audit_designs(config))
+    mc = next(record for record in records if record["method"] == "classical_monte_carlo")
+
+    assert mc["confidence_interval_covers_truth"] is True
+    assert mc["confidence_interval_low"] <= numerator / 64 <= mc["confidence_interval_high"]
+
+
 def _aggregate_fixture_record(
     *, requested: int, calls: int, estimate: float, replicate: int
 ) -> dict[str, object]:
