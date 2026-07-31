@@ -18,12 +18,15 @@ public final class LightingController {
             return false;
         }
         long started = System.nanoTime();
+        System.out.println("[QuantumClient] Submitting request " + request.requestId());
         try {
             gateway.estimate(request).whenComplete((result, error) -> {
                 double roundTripMs = (System.nanoTime() - started) / 1_000_000.0;
                 if (error != null) {
+                    System.out.println("[QuantumClient] Request " + request.requestId() + " failed: " + error.getMessage());
                     cache.fail(request.requestId(), error);
                 } else {
+                    System.out.println("[QuantumClient] Request " + request.requestId() + " completed with " + result.backend() + ", visibility: " + result.estimate() + ", roundtrip: " + roundTripMs + "ms");
                     cache.complete(request.requestId(), result, roundTripMs);
                 }
             });

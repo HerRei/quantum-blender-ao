@@ -96,7 +96,7 @@ public final class QuantumRenderingClient implements ClientModInitializer {
         toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.quantum-minecraft-rendering.toggle",
                 InputConstants.Type.KEYSYM,
-                InputConstants.KEY_Q,
+                InputConstants.KEY_V,
                 KEY_CATEGORY));
         cycleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.quantum-minecraft-rendering.cycle_algorithm",
@@ -208,9 +208,22 @@ public final class QuantumRenderingClient implements ClientModInitializer {
         cache.lastError().ifPresent(error -> lines.add("Error: " + error));
 
         Minecraft minecraft = Minecraft.getInstance();
-        int y = 8;
+        int maxWidth = 0;
         for (String line : lines) {
-            graphics.text(minecraft.font, line, 8, y, 0xFFFFFFFF, true);
+            int width = minecraft.font.width(line);
+            if (width > maxWidth) {
+                maxWidth = width;
+            }
+        }
+        
+        int x = 8;
+        int y = 8;
+        
+        // Draw semi-transparent black background
+        graphics.fill(x - 2, y - 2, x + maxWidth + 2, y + lines.size() * 10, 0x80000000);
+        
+        for (String line : lines) {
+            graphics.text(minecraft.font, line, x, y, 0xFFFFFFFF, true);
             y += 10;
         }
     }
