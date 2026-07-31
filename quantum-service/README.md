@@ -15,3 +15,17 @@ uv run pytest
 The v1 oracle is a visibility table produced by the classical DDA ray caster.
 This package does not claim to implement reversible ray marching.
 
+Implemented backends:
+
+- `mock`: deterministic integration fixture.
+- `exact`: reads every table entry.
+- `classical_monte_carlo`: seeded sampling with Wilson intervals.
+- `cpu_quantum`: Qiskit finite-shot, qubit-sparse MLAE. The strict budget counts
+  each use of the table-lookup circuit in `A`, `A^-1`, and Grover powers.
+- `intel_gpu`: capability-aware adapter only; unavailable until an actual
+  provider is installed and validated on the Linux target.
+
+MLAE was selected over phase-estimation QAE and the library's adaptive IAE for
+the initial benchmark because it uses no evaluation register and its complete
+schedule can be bounded before execution. Qiskit's simulator samples circuit
+measurements; the backend never reads statevector probabilities as its answer.

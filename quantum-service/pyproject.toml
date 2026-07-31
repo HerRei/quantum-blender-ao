@@ -29,6 +29,7 @@ dev = [
   "pytest>=8.4,<10",
   "pytest-cov>=6.2,<8",
   "ruff>=0.12,<1",
+  "types-psutil>=7,<8",
 ]
 
 [project.scripts]
@@ -52,4 +53,3 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 python_version = "3.11"
 strict = true
 packages = ["qmr"]
-

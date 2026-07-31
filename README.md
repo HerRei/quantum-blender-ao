@@ -5,7 +5,7 @@ Carlo sampling, and simulated quantum amplitude estimation on the same small
 voxel scenes. Minecraft is an optional interactive scene source and debug
 visualizer; the scientific core runs independently.
 
-> **Status (2026-07-31): data and voxel core implemented; backends in progress.** No Minecraft client, target
+> **Status (2026-07-31): scientific backends implemented; service and mod in progress.** No Minecraft client, target
 > GPU, Intel GPU backend, or shader integration has been run or validated.
 > Results must be measured; the repository contains no performance claims.
 
@@ -46,7 +46,9 @@ The design does not require AMD-to-Intel peer-to-peer transfers.
 
 Implemented so far: versioned JSON schemas, bit-packed voxel payloads, stable
 coordinate/index conventions, deterministic hemisphere directions, eight
-synthetic scenes, and a classical 3D-DDA visibility-table builder.
+synthetic scenes, a classical 3D-DDA visibility-table builder, exact and seeded
+Monte Carlo baselines, finite-shot CPU quantum amplitude estimation, and an
+explicitly unavailable Intel GPU adapter boundary.
 
 ## License
 
