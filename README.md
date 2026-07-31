@@ -6,11 +6,11 @@ estimation on the same voxel scenes. Minecraft Java/Fabric is an optional
 interactive scene source and debug display; the scientific core runs completely
 without Minecraft.
 
-> **Honest status — 2026-07-31:** the CPU scientific core, benchmark/plot
-> pipeline, HTTP service, tested Fabric client code, debug HUD, and optional
-> shader scaffold are implemented. The Minecraft client has not been launched.
-> No target GPU or Intel compute backend has been tested. The repository contains
-> no claimed performance result or quantum speed-up.
+> **Independent audit — 2026-07-31:** `cpu_quantum` is finite-shot MLAE, but the
+> original course-study matrix and its pooled plots do **not** establish the
+> expected QAE scaling or a query advantage over exact enumeration. Read the
+> [scientific audit](docs/scientific-audit.md) before interpreting benchmark
+> output. The Minecraft client, a physical QPU, and the target GPUs were not run.
 
 ## Research question
 
@@ -35,10 +35,10 @@ demonstrate practical quantum advantage.
 | Component | Local status on Apple Silicon |
 |---|---|
 | Python lint and strict typing | Passed |
-| Python unit/integration/schema tests | 29 passed |
+| Python unit/integration/schema/audit tests | 96 passed |
 | Synthetic benchmark and PNG/PDF plot smoke run | Executed; generated measurements are ignored, not research evidence |
 | Fabric/Gradle build with Java 25 | Passed |
-| Java unit tests | 18 passed during the Fabric build |
+| Java unit tests | 32 passed during the Fabric build |
 | Shader scaffold | Static checker passed |
 | Minecraft client / in-world HUD | Not launched or tested |
 | Iris runtime integration | Not run; no live custom-uniform bridge claimed |
@@ -76,11 +76,13 @@ assumed. The detailed design is in [architecture.md](docs/architecture.md).
 - Deterministic Fibonacci hemisphere directions for 8, 16, 32, and 64 samples.
 - Reproducible scenes: open sky, closed chamber, single wall, two-wall corner,
   tunnel, narrow opening, fixed-seed random occupancy, and Minecraft-like cave.
-- Shared classical 3D-DDA visibility-table construction.
+- One common classical 3D-DDA visibility-table implementation. The generic
+  runner currently rebuilds equivalent tables per backend invocation; the audit
+  experiment instead starts from explicitly hashed fixed tables.
 - `exact`, seeded `classical_monte_carlo` with Wilson intervals, and finite-shot
   Qiskit `cpu_quantum` backends.
-- Qubit-sparse maximum-likelihood amplitude estimation without a phase
-  estimation register and without reading exact statevector probabilities.
+- Qubit-sparse, non-adaptive maximum-likelihood amplitude estimation without a
+  phase-estimation register and without reading exact statevector probabilities.
 - Explicit separation of classical samples, table-oracle calls, shots, circuit
   executions, transpiled depth/gates, initialization, simulation, transfer, and
   end-to-end time.
@@ -134,16 +136,18 @@ small budget:
 ./scripts/run-benchmarks.sh experiments/configs/smoke.toml
 ```
 
-The broader course matrix is intentionally much slower:
+The broader course matrix is intentionally much slower, but is exploratory only:
 
 ```bash
 ./scripts/run-benchmarks.sh experiments/configs/course-study.yaml
 ```
 
 Every invocation writes a fresh CSV/JSONL pair under `experiments/results/` and
-PNG/PDF plots under `experiments/plots/`. Both are ignored by Git. Do not treat a
-smoke run as a measured paper result, and do not compare simulator wall-clock
-time with a physical QPU as if it showed speed-up.
+PNG/PDF plots under `experiments/plots/`. Both are ignored by Git. Because the
+course matrix has `N<=64`, mostly tests `M>=N`, uses only five seeds, and fixes
+the maximum Grover power, it is not a valid asymptotic scaling study. Do not
+treat a smoke/course run as paper evidence or compare simulator wall-clock time
+with a physical QPU as if it showed speed-up.
 
 ## Start the service
 

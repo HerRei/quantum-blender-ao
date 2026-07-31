@@ -1,22 +1,24 @@
 # Query-Efficient Ambient Visibility Estimation in Voxel Scenes with Simulated Quantum Amplitude Estimation
 
-**Draft status:** methodology and implementation draft; no research result has
-yet been accepted into this manuscript.
+**Draft status:** independently audited artifact draft. Only the hashed audit
+bundle described below is admissible as current numerical evidence; the original
+course-study and smoke plots are excluded.
 
 ## 1. Abstract
 
 Ambient visibility at a voxel surface point can be expressed as the mean of a
-binary function over discrete hemisphere directions. This work asks whether
-simulated quantum amplitude estimation can estimate that mean with fewer oracle
-queries than classical Monte Carlo sampling. We construct exact visibility
-tables with a classical three-dimensional DDA ray caster, then supply identical
-tables to exact, Monte Carlo, and finite-shot quantum estimators. The artifact
-reports query error separately from classical simulator runtime and records
-qubits, circuit depth, gates, shots, circuit executions, memory, transfer, and
-end-to-end latency. Minecraft is used only as an optional voxel source and
-interactive display. The current prototype does not implement reversible ray
-marching and makes no claim of practical quantum speed-up. Experimental results:
-**[RESULT TO BE MEASURED ON TARGET EXPERIMENT CONFIGURATION]**.
+binary function over discrete hemisphere directions. This work audits whether
+finite-shot simulated maximum-likelihood amplitude estimation (MLAE) estimates
+that mean with fewer logical table-oracle queries than iid Monte Carlo (MC).
+Version 1 first constructs the complete visibility table with a classical
+three-dimensional DDA ray caster. A dedicated audit then studies exact
+64-entry tables at seven amplitudes and six realized query budgets, separating
+high-replication analytical finite-shot statistics from actual Qiskit
+StatevectorSampler CPU timing and circuit resources. Exact enumeration is a
+mandatory control because it has zero error after 64 table reads. Minecraft is
+only an optional voxel source and debug display; it was not launched during the
+audit. The prototype is not reversible quantum ray tracing and makes no claim
+of practical quantum speed-up. **AUDIT_PAPER_RESULT_PLACEHOLDER**
 
 ## 2. Introduction
 
@@ -33,9 +35,11 @@ or outweigh query savings. A simulated QPU is itself classical and cannot
 demonstrate physical quantum advantage. This work therefore treats oracle
 queries and observed runtime as different response variables.
 
-The contribution is a reproducible course-scale experiment rather than a full
-renderer: shared voxel cases, exact truth, fair budget accounting, finite-shot
-circuits, raw result formats, and an optional Minecraft visualization client.
+The contribution is a reproducible course-scale artifact rather than a full
+renderer: explicit quantum operators, finite-shot circuits, auditable logical
+cost accounting, exact finite-domain controls, archived raw records, and an
+optional Minecraft visualization client. The independent audit also documents
+where the original benchmark design was not fair or publication-ready.
 
 ## 3. Related Work
 
@@ -72,39 +76,46 @@ A = (1/N) sum_{i=0}^{N-1} f(i).
 ```
 
 The null hypothesis is that the selected simulated quantum estimator does not
-obtain lower RMSE than classical Monte Carlo at matched, fully accounted oracle
-budgets across the predefined cases. A secondary question examines the runtime
-and memory price of any query-space difference.
+obtain lower RMSE than iid MC at matched, fully accounted *realized* logical
+oracle budgets across the predefined amplitudes. Exact enumeration is evaluated
+separately and supersedes either estimator once its 64-query cost is affordable.
+A secondary question examines CPU-simulator runtime and synthesized circuit
+resources; neither is treated as physical-QPU performance.
 
 ## 5. Methodology
 
-Eight deterministic scene families cover boundary cases and intermediate
-occlusion: open sky, closed chamber, one wall, two-wall corner, tunnel, narrow
-opening, seeded random occupancy, and a Minecraft-like cave. Query positions and
-normals are fixed by configuration. Fibonacci-distributed hemisphere directions
-are generated deterministically for `N` in `{8,16,32,64}`.
+The generic scene runner contains eight deterministic scene families and
+Fibonacci-distributed hemisphere directions for `N` in `{8,16,32,64}`. It calls
+the same DDA function for each estimator, but currently rebuilds an equivalent
+table and exact truth inside every backend invocation. Its original five-seed,
+endpoint-heavy course matrix and pooled plots are therefore exploratory only.
 
-For each case, a 3D-DDA traversal produces one binary table. The table is frozen
-and shared among all estimators. Exact enumeration supplies ground truth. Runs
-vary scene, direction count, budget, and seed. Raw records are written as JSONL
-and CSV before plots are generated.
+The independent audit uses explicitly specified 64-bit tables with amplitudes
+`0`, `1/64`, `1/8`, `1/2`, `7/8`, `63/64`, and `1`. For each requested cap in
+`{32,64,128,256,512,1024}`, MC is matched to MLAE's realized logical lookup
+calls. At least 256 deterministic replicates per amplitude, budget, and method
+produce bias, sample standard deviation, RMSE, empirical interval coverage, and
+predefined bootstrap uncertainty. Full-range log-log slopes use every positive-
+RMSE point; no amplitude or budget is removed post hoc.
 
-The primary statistic is RMSE across preregistered seeds at each method/budget.
-Absolute error is retained per run. Timing is analyzed separately for cold and
-warm execution where sufficient repetitions exist. Failed and unavailable cases
-remain visible.
+Actual timing is a separate experiment on synthesized contiguous-prefix
+64-entry oracles. Warm-ups remain in raw data and are excluded from summaries;
+MC/Qiskit execution order is deterministically balanced. Raw failures are
+retained. Exact config, source identity, truth-table hashes, raw CSV/JSONL,
+summaries, plots, and artifact hashes are archived together.
 
 ## 6. Classical Baselines
 
 The exact backend reads all `N` entries and returns their arithmetic mean. It is
-the ground-truth method rather than a budget-matched estimator.
+both ground truth and the relevant finite-domain classical control: for the
+audit domain it costs 64 logical reads and then has identically zero error.
 
 The Monte Carlo backend draws seeded uniform indices with replacement. Each
 draw consumes one table-oracle call. The estimate is the sample mean and the
 reported proportion interval is Wilson score at the configured confidence
 level. Its query cost and measured Python runtime are both stored.
 
-Classical results: **[RESULT TO BE MEASURED]**.
+Classical audit result: **AUDIT_MC_RESULT_PLACEHOLDER**
 
 ## 7. Quantum Algorithm
 
@@ -114,12 +125,16 @@ superposition. A synthesized reversible lookup flips the objective qubit for
 visible entries. The probability of measuring the objective in state one is
 therefore `A`.
 
-The prototype executes a finite-shot maximum-likelihood amplitude-estimation
-schedule inspired by Suzuki et al., using increasing Grover powers without an
-evaluation register. This choice makes the complete schedule budgetable before
-execution and keeps qubit count small. Qiskit constructs, transpiles, and
-samples the circuits. The estimator does not read exact statevector
-probabilities.
+The prototype executes finite-shot maximum-likelihood amplitude estimation in
+the QAE-without-QPE family of Suzuki et al., using increasing Grover powers
+without an evaluation register. The schedule is fixed before execution and is
+not IQAE: there is no adaptive stopping criterion. `desired_accuracy` only caps
+the maximum Grover exponent heuristically; it is not an achieved-error
+guarantee. Qiskit constructs and samples the circuits. Separately transpiled
+all-to-all `u/cx`, optimization-level-0 copies provide analysis-only gate and
+depth metrics; StatevectorSampler receives the untranspiled circuits. The
+estimator consumes finite objective-bit counts and never reads exact
+statevector probabilities as its answer.
 
 Oracle calls include the lookup in state preparation and lookup/inverse lookup
 applications induced by each Grover power, multiplied by shots. Shots, distinct
@@ -127,7 +142,7 @@ circuit executions, transpiled depth, and gate count are separate fields. This
 accounting is implementation-specific and is published with the raw schedule.
 
 Crucially, the lookup table was built classically. This is not reversible
-quantum ray marching. Quantum results: **[RESULT TO BE MEASURED]**.
+quantum ray marching. Quantum audit result: **AUDIT_QAE_RESULT_PLACEHOLDER**
 
 ## 8. Hybrid Minecraft Architecture
 
@@ -150,7 +165,7 @@ as independent devices. It requires no peer-to-peer transfer.
 
 ### Development setup
 
-- Apple-Silicon MacBook: **[EXACT MODEL/CPU/RAM/macOS VERSION TO RECORD]**
+- MacBook Pro `MacBookPro18,3`, Apple M1 Pro (10 cores), 16 GB RAM, macOS 26.4.1
 - CPython/Qiskit versions: captured automatically in run metadata
 - Java/Fabric versions: pinned in the repository
 
@@ -171,40 +186,46 @@ in the artifact documentation.
 
 ## 10. Metrics
 
-The artifact records estimate, exact truth, absolute/relative error, confidence
-interval, oracle calls, classical samples, shots, circuit executions, qubits,
-transpiled depth and gates, initialization time, host/device transfer time,
-device/CPU simulation time, end-to-end service latency, process memory,
-estimated statevector memory, warnings, backend, seed, and environment metadata.
+The artifact distinguishes logical lookup calls, forward/inverse state
+preparations, Grover iterations, good-state markings, total shots, distinct
+power circuits, sampler jobs, DDA rays, exact-table reads, transpiled quantum
+depth, maximum/schedule/shot-weighted gates, phase timings, audit end-to-end
+runtime, point-in-time process RSS, failures, seeds, and environment metadata.
+The old `peak_memory_bytes` value was current RSS rather than a peak and is no
+longer populated.
 
-Main figures plot absolute error and RMSE against oracle calls, error against
-runtime, runtime against qubits/depth, memory against qubits, and end-to-end
-latency. CPU/GPU plots are generated only when both result types exist.
+The six audit figure families show RMSE, bias, sample standard deviation,
+measured audit runtime, maximum circuit depth, and maximum plus shot-weighted
+gate count against realized logical calls. Estimator uncertainty and failure
+counts are shown or archived according to the preregistered analysis. No CPU/GPU
+figure exists because no GPU implementation was available.
 
-## 11. Expected Results
+## 11. Audited Results
 
-Amplitude-estimation theory motivates investigating better asymptotic query
-scaling than direct sampling under ideal oracle assumptions. The small,
-finite-shot, synthesized-table setting may not reach that regime. Classical
-statevector simulation is expected to impose substantial overhead, but its
-magnitude is an empirical question here.
+Amplitude-estimation theory motivates investigating idealized error scaling
+near `1/M` when the maximum Grover power grows with the query budget. In the
+checked-in configuration, however, the schedule saturates at
+`[0,1,2,4,8]`; above 35 per-shot calls only the shot count increases. Moreover,
+the 64-entry exact control already has zero error at a lower cost than most
+configured estimator points.
 
-No numeric expectation is entered before measurement.
-
-- Query-space outcome: **[RESULT TO BE MEASURED]**
-- CPU runtime outcome: **[RESULT TO BE MEASURED]**
-- GPU runtime/transfer outcome: **[RESULT TO BE MEASURED ON TARGET HARDWARE]**
-- Minecraft end-to-end latency: **[RESULT TO BE MEASURED AFTER CLIENT TESTING]**
+- Query-space outcome: **AUDIT_QUERY_RESULT_PLACEHOLDER**
+- CPU runtime outcome: **AUDIT_RUNTIME_RESULT_PLACEHOLDER**
+- Exact finite-domain outcome: zero error after `N=64` reads.
+- GPU runtime/transfer outcome: not measured; no Intel provider exists.
+- Minecraft end-to-end latency: not measured; the client was not launched.
 
 ## 12. Limitations
 
 The oracle is a classically generated table; table construction and arbitrary
-truth-table synthesis limit external validity. Direction counts and scenes are
-small. Binary sky visibility omits graded materials, indirect radiance, and
-production sampling. CPU simulation cannot establish quantum advantage. The
-Intel path is not implemented or tested at draft time. Minecraft and Iris have
-not been run. Confidence methods differ by estimator, and small seed counts may
-have low statistical power.
+truth-table synthesis limit external validity. The audit circuit-resource tables
+use one documented contiguous-prefix layout, so their synthesis cost does not
+generalize to arbitrary Minecraft tables at the same amplitude. The domain is
+small, and most tested budgets exceed it. Binary sky visibility omits graded
+materials, indirect radiance, and production sampling. Ideal CPU simulation
+cannot establish quantum advantage or predict noisy hardware. The MLAE interval
+is asymptotically calibrated and may have poor finite-shot/boundary coverage.
+The Intel path, Minecraft, and Iris remain untested.
 
 ## 13. Threats to Validity
 
@@ -214,8 +235,10 @@ Wall-clock boundaries can be distorted by initialization and asynchronous
 queues, so explicit synchronization and component timings are required.
 
 **Internal validity.** Cache warming, run order, CPU frequency, thread
-contention, and random seeds can affect results. Fixed configs, order rotation,
-warm-up labels, paired cases, and raw failure records mitigate these effects.
+contention, and random seeds can affect results. The audit uses a fixed config,
+balanced deterministic MC/Qiskit ordering, warm-up labels, matched realized
+budgets, multiple deterministic replicates, and raw failure records. Five timed
+repetitions per cell still support only a descriptive local runtime comparison.
 
 **External validity.** Synthetic scenes and at most 64 directions do not
 represent full Minecraft rendering. A770 results on one driver and x2 topology
@@ -240,11 +263,11 @@ OCuLink topology can test portability.
 
 ## 15. Conclusion
 
-This artifact establishes a falsifiable, reproducible comparison between
-classical sampling and finite-shot simulated amplitude estimation on a shared
-voxel visibility oracle. It deliberately separates query complexity from
-simulator and rendering cost. Final conclusion:
-**[CONCLUSION TO BE WRITTEN AFTER PREREGISTERED MEASUREMENTS]**.
+This artifact establishes a falsifiable comparison between iid sampling,
+finite-shot simulated MLAE, and exact enumeration on an explicitly defined
+visibility-table oracle. It deliberately separates idealized query complexity,
+oracle synthesis, simulator cost, and rendering integration. Final audited
+conclusion: **AUDIT_PAPER_CONCLUSION_PLACEHOLDER**
 
 ## 16. References
 
@@ -264,4 +287,3 @@ simulator and rendering cost. Final conclusion:
 5. Qiskit contributors, [Qiskit documentation](https://quantum.cloud.ibm.com/docs/en/guides).
 6. Fabric contributors, [Fabric documentation](https://docs.fabricmc.net/).
 7. Iris contributors, [Iris shader documentation](https://shaders.properties/current/).
-

@@ -9,6 +9,7 @@ import ch.unibas.qmr.model.Vector3;
 import ch.unibas.qmr.net.JdkHttpTransport;
 import ch.unibas.qmr.net.LightingServiceClient;
 import ch.unibas.qmr.request.RequestFactory;
+import ch.unibas.qmr.scene.ChunkFootprint;
 import ch.unibas.qmr.scene.ExtractedScene;
 import ch.unibas.qmr.scene.SceneExtractor;
 import ch.unibas.qmr.state.LightingController;
@@ -23,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -31,6 +34,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.BlockHitResult;
@@ -51,6 +55,7 @@ public final class QuantumRenderingClient implements ClientModInitializer {
     private final VisibilitySmoother smoother = new VisibilitySmoother(0.25);
     private ConfigStore configStore;
     private ModConfig config;
+    private LightingServiceClient serviceClient;
     private LightingController controller;
     private KeyMapping toggleKey;
     private KeyMapping cycleKey;
@@ -62,14 +67,17 @@ public final class QuantumRenderingClient implements ClientModInitializer {
                 .getConfigDir()
                 .resolve("quantum-minecraft-rendering.json"));
         config = loadConfig();
-        LightingServiceClient service = new LightingServiceClient(
+        serviceClient = new LightingServiceClient(
                 URI.create(config.serviceUrl()),
                 Duration.ofMillis(config.timeoutMs()),
                 JdkHttpTransport.createDefault(),
                 new Gson());
-        controller = new LightingController(service, cache);
+        controller = new LightingController(serviceClient, cache);
         registerKeys();
         ClientTickEvents.END_CLIENT_TICK.register(this::onEndTick);
+        ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register(
+                (minecraft, level) -> resetTransientState());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(this::onClientStopping);
         HudElementRegistry.addLast(
                 Identifier.fromNamespaceAndPath(MOD_ID, "debug_hud"), this::renderHud);
         LOGGER.info("Quantum rendering client initialized; enabled={}", config.enabled());
@@ -107,19 +115,27 @@ public final class QuantumRenderingClient implements ClientModInitializer {
             saveConfig();
         }
         ticks++;
+        ClientLevel level = minecraft.level;
         if (!config.enabled()
                 || cache.isPending()
                 || ticks % config.requestIntervalTicks() != 0
-                || minecraft.level == null
+                || level == null
                 || minecraft.player == null) {
             return;
         }
         try {
             QueryTarget target = queryTarget(minecraft);
+            if (!ChunkFootprint.allChunksLoaded(
+                    target.center(),
+                    config.extractionRadius(),
+                    level.getChunkSource()::hasChunk)) {
+                LOGGER.debug("Skipping lighting request because its chunk footprint is not loaded");
+                return;
+            }
             ExtractedScene scene = extractor.extract(
                     target.center(),
                     config.extractionRadius(),
-                    new MinecraftVoxelSampler(minecraft.level),
+                    new MinecraftVoxelSampler(level),
                     target.queryPosition(),
                     target.normal());
             LightingRequest request = requestFactory.create(scene, config);
@@ -158,6 +174,18 @@ public final class QuantumRenderingClient implements ClientModInitializer {
             configStore.save(config);
         } catch (IOException error) {
             LOGGER.error("Could not save quantum rendering config", error);
+        }
+    }
+
+    private void resetTransientState() {
+        cache.reset();
+        smoother.reset();
+    }
+
+    private void onClientStopping(Minecraft ignored) {
+        resetTransientState();
+        if (serviceClient != null) {
+            serviceClient.close();
         }
     }
 

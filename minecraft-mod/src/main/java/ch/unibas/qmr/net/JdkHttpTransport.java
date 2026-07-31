@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 public final class JdkHttpTransport implements AsyncJsonTransport {
     private final HttpClient client;
 
+    /** Creates a transport that owns the supplied client and closes it with the transport. */
     public JdkHttpTransport(HttpClient client) {
         this.client = client;
     }
@@ -31,5 +32,10 @@ public final class JdkHttpTransport implements AsyncJsonTransport {
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> new HttpResponseData(response.statusCode(), response.body()));
     }
-}
 
+    @Override
+    public void close() {
+        client.shutdownNow();
+        client.close();
+    }
+}

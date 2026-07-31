@@ -27,5 +27,10 @@ public final class VisibilitySmoother {
         lastNanos = nowNanos;
         return current;
     }
-}
 
+    public synchronized void reset() {
+        current = 0;
+        lastNanos = 0;
+        initialized = false;
+    }
+}

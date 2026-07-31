@@ -55,6 +55,7 @@ public final class TestFixtures {
                 0.2,
                 null,
                 0.3,
+                4096L,
                 1024L,
                 List.of(),
                 Map.of("device_name", "CPU"),
@@ -62,4 +63,3 @@ public final class TestFixtures {
                 Map.of("fixture", true));
     }
 }
-

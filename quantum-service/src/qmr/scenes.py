@@ -34,12 +34,16 @@ class SyntheticScene:
         algorithm: Algorithm = Algorithm.EXACT,
         seed: int = 0,
         desired_accuracy: float = 0.05,
+        confidence_level: float = 0.95,
         max_oracle_calls: int = 1024,
     ) -> LightingRequest:
         return LightingRequest(
             request_id=uuid5(
                 NAMESPACE_URL,
-                f"qmr:{self.name}:{direction_count}:{algorithm}:{seed}:{max_oracle_calls}",
+                (
+                    f"qmr:{self.name}:{direction_count}:{algorithm}:{seed}:"
+                    f"{max_oracle_calls}:{desired_accuracy:.17g}:{confidence_level:.17g}"
+                ),
             ),
             voxel_dimensions=self.grid.dimensions,
             voxel_data=self.grid.to_payload(),
@@ -52,6 +56,7 @@ class SyntheticScene:
             algorithm=algorithm,
             seed=seed,
             desired_accuracy=desired_accuracy,
+            confidence_level=confidence_level,
             max_oracle_calls=max_oracle_calls,
             ray_max_distance=128.0,
             metadata={"scene": self.name, "synthetic": True},

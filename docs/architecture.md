@@ -50,8 +50,10 @@ HTTP.
    integer origin. The stable flat index is `x + size_x * (y + size_y * z)`.
 3. Solid, transparent, and emissive channels are encoded independently. Binary
    channels use base64-encoded, little-bit-first bitsets.
-4. `LightingController` launches an HTTP request on a worker executor. Render
-   callbacks only read controller state; they never wait for HTTP or simulation.
+4. `LightingController` serializes the immutable request on the client tick and
+   schedules non-blocking `HttpClient.sendAsync` I/O. World extraction, bit
+   packing, and JSON preparation are still client-tick work; callbacks never
+   wait for HTTP or simulation.
 5. The service validates the request, constructs the visibility table once, and
    dispatches to the configured backend.
 6. A compact result is returned and atomically replaces the cache's last valid
@@ -107,13 +109,16 @@ powers-of-two `N` in `{8, 16, 32, 64}`, so uniform state preparation is a layer
 of Hadamards. The truth table is synthesized into a reversible lookup operation;
 it was itself produced classically by DDA.
 
-The initial estimator uses a maximum-likelihood schedule without a phase
-estimation register. Qubit, transpiled circuit depth, and gate-count metrics are
-derived from the circuits that are executed. An oracle invocation is counted
-for the table lookup in state preparation and for each lookup or inverse lookup
-inside Grover powers. Shots and complete circuit executions are reported
-separately. See [research-question.md](research-question.md) for the accounting
-rules.
+The initial estimator uses a fixed, non-adaptive maximum-likelihood schedule
+without a phase-estimation register. Analysis copies of each power circuit are
+transpiled to all-to-all `u/cx` at optimization level 0. Their maximum depth,
+maximum gates, schedule-total gates, and shot-weighted gates are resource
+estimates; StatevectorSampler receives the untranspiled circuits. An oracle
+invocation is counted for the table lookup in state preparation and for each
+lookup or inverse lookup inside Grover powers. Shots, distinct power circuits,
+sampler jobs, and Grover iterations are reported separately. See
+[research-question.md](research-question.md) and the
+[scientific audit](scientific-audit.md) for the accounting rules.
 
 ## Concurrency and failure behavior
 
@@ -151,4 +156,3 @@ limited to PCIe 4.0 x2.
   benchmarked separately from the lookup-table study.
 - Shader integration remains optional until Iris documents a stable public path
   for injecting arbitrary mod-owned values.
-

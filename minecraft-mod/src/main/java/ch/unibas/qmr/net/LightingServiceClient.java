@@ -10,8 +10,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
-/** Non-blocking JSON client; callers never join this future on the render thread. */
-public final class LightingServiceClient implements LightingGateway {
+/** Non-blocking JSON client that owns its transport; callers never join on the render thread. */
+public final class LightingServiceClient implements LightingGateway, AutoCloseable {
     private final URI estimateUri;
     private final Duration timeout;
     private final AsyncJsonTransport transport;
@@ -45,5 +45,9 @@ public final class LightingServiceClient implements LightingGateway {
         }
         return result;
     }
-}
 
+    @Override
+    public void close() {
+        transport.close();
+    }
+}

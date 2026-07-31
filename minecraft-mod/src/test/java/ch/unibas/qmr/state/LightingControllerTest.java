@@ -39,5 +39,20 @@ class LightingControllerTest {
         assertFalse(cache.isPending());
         assertTrue(cache.lastError().orElseThrow().contains("fixture"));
     }
-}
 
+    @Test
+    void ignoresLateCompletionAfterCacheReset() {
+        UUID id = UUID.randomUUID();
+        CompletableFuture<LightingResult> future = new CompletableFuture<>();
+        LightingResultCache cache = new LightingResultCache();
+        LightingController controller = new LightingController(request -> future, cache);
+        assertTrue(controller.submit(TestFixtures.request(id)));
+
+        cache.reset();
+        future.complete(TestFixtures.result(id, 0.75));
+
+        assertFalse(cache.isPending());
+        assertTrue(cache.lastValid().isEmpty());
+        assertTrue(cache.lastError().isEmpty());
+    }
+}

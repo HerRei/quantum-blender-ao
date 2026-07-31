@@ -1,8 +1,10 @@
 package ch.unibas.qmr.net;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ch.unibas.qmr.TestFixtures;
 import com.google.gson.Gson;
@@ -12,6 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class LightingServiceClientTest {
@@ -70,6 +73,52 @@ class LightingServiceClientTest {
         assertInstanceOf(LightingServiceException.class, rootCause(error));
     }
 
+    @Test
+    void rejectsSemanticallyInvalidResult() {
+        UUID id = UUID.randomUUID();
+        String invalid = gson.toJson(TestFixtures.result(id, 0.5))
+                .replace("\"estimate\":0.5", "\"estimate\":1.5");
+        LightingServiceClient client = client(
+                Duration.ofSeconds(1),
+                (uri, json, timeout) ->
+                        CompletableFuture.completedFuture(new HttpResponseData(200, invalid)));
+
+        CompletionException error = assertThrows(
+                CompletionException.class,
+                () -> client.estimate(TestFixtures.request(id)).join());
+
+        assertInstanceOf(IllegalArgumentException.class, rootCause(error));
+    }
+
+    @Test
+    void closeDelegatesToOwnedTransport() {
+        AtomicBoolean closed = new AtomicBoolean();
+        AsyncJsonTransport transport = new AsyncJsonTransport() {
+            @Override
+            public CompletableFuture<HttpResponseData> post(
+                    URI uri, String json, Duration timeout) {
+                return CompletableFuture.failedFuture(new AssertionError("post must not be called"));
+            }
+
+            @Override
+            public void close() {
+                closed.set(true);
+            }
+        };
+        LightingServiceClient client = client(Duration.ofSeconds(1), transport);
+
+        client.close();
+
+        assertTrue(closed.get());
+    }
+
+    @Test
+    void defaultJdkTransportCanBeClosed() {
+        JdkHttpTransport transport = JdkHttpTransport.createDefault();
+
+        assertDoesNotThrow(transport::close);
+    }
+
     private LightingServiceClient client(Duration timeout, AsyncJsonTransport transport) {
         return new LightingServiceClient(URI.create("http://127.0.0.1:8080"), timeout, transport, gson);
     }
@@ -82,4 +131,3 @@ class LightingServiceClientTest {
         return current;
     }
 }
-

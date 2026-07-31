@@ -28,3 +28,14 @@ def test_every_scene_produces_binary_table_of_requested_size() -> None:
         assert len(table) == 16
         assert set(table) <= {0, 1}
 
+
+def test_request_id_covers_accuracy_and_confidence_parameters() -> None:
+    scene = all_scenes()["open_sky"]
+    baseline = scene.request(desired_accuracy=0.1, confidence_level=0.9)
+
+    assert (
+        scene.request(desired_accuracy=0.2, confidence_level=0.9).request_id != baseline.request_id
+    )
+    assert (
+        scene.request(desired_accuracy=0.1, confidence_level=0.8).request_id != baseline.request_id
+    )

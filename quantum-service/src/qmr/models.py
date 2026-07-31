@@ -140,7 +140,7 @@ class ConfidenceInterval(StrictModel):
     low: float = Field(ge=0, le=1)
     high: float = Field(ge=0, le=1)
     level: float = Field(gt=0, lt=1)
-    method: str
+    method: str = Field(min_length=1, pattern=r"\S")
 
     @model_validator(mode="after")
     def ordered(self) -> ConfidenceInterval:
@@ -152,7 +152,7 @@ class ConfidenceInterval(StrictModel):
 class LightingResult(StrictModel):
     schema_version: Literal["1.0"] = "1.0"
     request_id: UUID
-    backend: str
+    backend: str = Field(min_length=1, pattern=r"\S")
     estimate: float = Field(ge=0, le=1)
     ground_truth: float | None = Field(default=None, ge=0, le=1)
     absolute_error: float | None = Field(default=None, ge=0)
@@ -168,6 +168,9 @@ class LightingResult(StrictModel):
     simulation_ms: float = Field(ge=0)
     transfer_ms: float | None = Field(default=None, ge=0)
     end_to_end_ms: float = Field(ge=0)
+    process_rss_bytes: int | None = Field(default=None, ge=0)
+    # Retained as a nullable wire-format compatibility field. The process RSS
+    # sampled after a run is not a per-run peak and must not be stored here.
     peak_memory_bytes: int | None = Field(default=None, ge=0)
     warnings: list[str] = Field(default_factory=list)
     hardware: dict[str, Any] = Field(default_factory=dict)

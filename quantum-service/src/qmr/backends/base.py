@@ -73,7 +73,7 @@ def error_values(estimate: float, truth: float | None) -> tuple[float | None, fl
     if truth is None:
         return None, None
     absolute = abs(estimate - truth)
-    relative = (0.0 if absolute == 0 else None) if truth == 0 else absolute / abs(truth)
+    relative = None if truth == 0 else absolute / abs(truth)
     return absolute, relative
 
 
@@ -118,7 +118,8 @@ def result_for(
         simulation_ms=simulation_ms,
         transfer_ms=transfer_ms,
         end_to_end_ms=end_to_end_ms,
-        peak_memory_bytes=psutil.Process().memory_info().rss,
+        process_rss_bytes=psutil.Process().memory_info().rss,
+        peak_memory_bytes=None,
         warnings=warnings or [],
         hardware=hardware,
         software=software,

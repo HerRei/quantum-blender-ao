@@ -9,8 +9,12 @@ conflating them.
 
 ## Preregistered factors
 
-The initial course-scale grid is defined in
-`experiments/configs/course-study.yaml`:
+The original course-scale grid is defined in
+`experiments/configs/course-study.yaml`, but the scientific audit rejects it as
+an asymptotic scaling grid. Its domain has `N <= 64`, most configured budgets are
+at least `N`, it has only five seeds, and its MLAE schedule stops growing after
+35 per-shot lookup calls. It may be used only for exploratory software runs
+until replaced.
 
 - scenes: open sky, closed chamber, single wall, two-wall corner, tunnel,
   narrow opening, fixed-seed random occupancy, and a small Minecraft-like cave;
@@ -28,7 +32,9 @@ a scientific result.
    backend capability report.
 2. Generate each named scene from versioned code and any specified seed.
 3. Generate the deterministic Fibonacci hemisphere directions.
-4. Build one DDA visibility table for a case and preserve it for all estimators.
+4. Build one DDA visibility table for a publication case, hash it, and preserve
+   it for all estimators. The generic v1 runner currently rebuilds equivalent
+   tables per run and does not yet satisfy this publication requirement.
 5. Compute exact ground truth.
 6. Run estimators across budgets and seeds. Randomize or rotate estimator order
    in the full study to reduce thermal/order bias.
@@ -38,10 +44,20 @@ a scientific result.
 9. Repeat on the target Linux machine only after capability and correctness
    gates pass.
 
+For a query-scaling experiment, require `N >> max(M)` and include exact
+enumeration plus a cached or without-replacement classical control. Predefine a
+schedule family whose maximum Grover power grows over multiple budget points,
+and match MC to the QAE schedule's *realized* logical calls.
+
 Warm-up runs may populate interpreter, JIT, and filesystem caches, but must be
 tagged and excluded from reported timing. Query/error analysis may combine cold
 and warm runs only if their oracle schedules are identical; timing analysis
 must not.
+
+The dedicated audit runner implements this timing rule with separate warm-up
+records and a deterministic, seed-pinned balanced MC/Qiskit pair order within
+each phase. The chosen order and global execution sequence are retained in every
+raw timing row.
 
 ## Metrics
 
@@ -63,20 +79,21 @@ so in metadata/warnings.
 
 ## Analysis
 
-Primary plots:
+Primary publication/audit plots are deliberately limited to:
 
-- absolute error versus oracle calls;
 - RMSE versus oracle calls;
-- error versus measured runtime;
-- runtime versus qubit count;
-- runtime versus circuit depth;
-- memory versus qubit count;
-- end-to-end latency;
-- CPU versus GPU only after both use validated implementations.
+- bias versus oracle calls;
+- sample standard deviation versus oracle calls;
+- measured runtime versus oracle calls, with timing stages distinguished;
+- maximum transpiled quantum depth versus oracle calls; and
+- maximum plus shot-weighted quantum gate count versus oracle calls.
 
-For each estimator/budget, report median absolute error, RMSE, dispersion, and
-the number of successful runs. Use paired scene/seed comparisons where both
-estimators completed. Do not silently drop timeouts or backend failures.
+For each amplitude/estimator/realized budget, report bias, sample standard
+deviation, RMSE, confidence-interval coverage, and successful/failed run counts.
+Use paired case/seed comparisons where both estimators completed. Do not silently
+drop timeouts or backend failures. Fit the complete predefined range; endpoint
+series with identically zero RMSE have no defined log-log slope and are reported
+without one.
 
 The query comparison needs a common cost convention. Main figures use the
 implementation's complete lookup-call accounting. A sensitivity appendix may
@@ -116,9 +133,9 @@ Until then, `intel_gpu` remains an adapter that reports unavailable.
 
 ## Reproducibility record
 
-Archive the config, raw CSV/JSONL, generated plots, commit hash, environment
-report, and a short run log together. Generated results are ignored in this
-repository by default to prevent fixtures from being mistaken for measured
-evidence. A release artifact or separate immutable data archive should hold the
-course submission's final measurements.
-
+Archive the config, raw CSV/JSONL, generated plots, source and dirty-state
+identity, config/table/raw hashes, environment report, failures, and a short run
+log together. Generic generated results remain ignored to prevent smoke fixtures
+from being mistaken for evidence. The audit bundle is an explicitly labelled,
+versioned exception; a release artifact or separate immutable archive should
+hold the final course measurements.

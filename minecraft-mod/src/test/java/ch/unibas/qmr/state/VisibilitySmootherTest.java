@@ -16,5 +16,15 @@ class VisibilitySmootherTest {
         assertTrue(halfway > 0 && halfway < 1);
         assertTrue(smoother.update(1.0, 2_000_000_000L) > halfway);
     }
-}
 
+    @Test
+    void resetMakesNextValueAnUnsmoothedBaseline() {
+        VisibilitySmoother smoother = new VisibilitySmoother(1.0);
+        smoother.update(0.0, 0);
+        smoother.update(1.0, 1_000_000_000L);
+
+        smoother.reset();
+
+        assertEquals(0.25, smoother.update(0.25, 2_000_000_000L));
+    }
+}

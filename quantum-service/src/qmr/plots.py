@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,125 +71,112 @@ def _scatter_by_backend(
     return fig
 
 
-def _rmse_plot(records: list[dict[str, Any]]) -> Any | None:
-    groups: dict[tuple[str, int], list[float]] = defaultdict(list)
-    for record in records:
-        result = record["result"]
-        error = result.get("absolute_error")
-        calls = result.get("oracle_calls")
-        if error is not None and calls is not None:
-            groups[(str(result["backend"]), int(calls))].append(float(error))
-    if not groups:
-        return None
+def _metadata_scatter_by_backend(
+    records: list[dict[str, Any]],
+    metadata_key: str,
+    xlabel: str,
+    ylabel: str,
+) -> Any | None:
     fig, axis = plt.subplots(figsize=(7, 4.5))
-    for backend in sorted({key[0] for key in groups}):
-        points = sorted(
-            (
-                calls,
-                math.sqrt(sum(value * value for value in values) / len(values)),
+    plotted = False
+    for backend in sorted({str(record["result"]["backend"]) for record in records}):
+        pairs = []
+        for record in records:
+            result = record["result"]
+            if result["backend"] != backend:
+                continue
+            metadata = result.get("metadata")
+            value = metadata.get(metadata_key) if isinstance(metadata, dict) else None
+            calls = result.get("oracle_calls")
+            if calls is not None and value is not None:
+                pairs.append((float(calls), float(value)))
+        if pairs:
+            axis.scatter(
+                [item[0] for item in pairs],
+                [item[1] for item in pairs],
+                alpha=0.75,
+                label=backend,
             )
-            for (candidate, calls), values in groups.items()
-            if candidate == backend
-        )
-        axis.plot(
-            [item[0] for item in points],
-            [item[1] for item in points],
-            marker="o",
-            label=backend,
-        )
-    axis.set_xlabel("Visibility-table oracle calls")
-    axis.set_ylabel("RMSE")
+            plotted = True
+    if not plotted:
+        plt.close(fig)
+        return None
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel(ylabel)
     axis.grid(alpha=0.25)
     axis.legend()
     return fig
-
-
-def _latency_plot(records: list[dict[str, Any]]) -> Any | None:
-    groups: dict[str, list[float]] = defaultdict(list)
-    for record in records:
-        result = record["result"]
-        latency = result.get("end_to_end_ms")
-        if latency is not None:
-            groups[str(result["backend"])].append(float(latency))
-    if not groups:
-        return None
-    names = sorted(groups)
-    fig, axis = plt.subplots(figsize=(7, 4.5))
-    axis.boxplot([groups[name] for name in names], tick_labels=names)
-    axis.set_ylabel("End-to-end latency (ms)")
-    axis.tick_params(axis="x", rotation=20)
-    axis.grid(axis="y", alpha=0.25)
-    return fig
-
-
-def _cpu_gpu_plot(records: list[dict[str, Any]]) -> Any | None:
-    selected = [
-        record
-        for record in records
-        if record["result"].get("backend") in {"cpu_quantum", "intel_gpu"}
-    ]
-    if {record["result"]["backend"] for record in selected} != {"cpu_quantum", "intel_gpu"}:
-        return None
-    return _scatter_by_backend(
-        selected,
-        "qubit_count",
-        "simulation_ms",
-        "Qubits",
-        "Simulation time (ms)",
-    )
 
 
 def generate_plots(
     records: list[dict[str, Any]], output_dir: Path, stem: str = "benchmark"
 ) -> PlotReport:
     output_dir.mkdir(parents=True, exist_ok=True)
+    status_counts = {
+        status: sum(record.get("status") == status for record in records)
+        for status in ("ok", "failed", "skipped")
+    }
     records = _successful(records)
     builders: list[tuple[str, Callable[[], Any | None]]] = [
         (
-            "absolute-error-vs-oracle-calls",
+            "raw-absolute-error-vs-logical-oracle-calls",
             lambda: _scatter_by_backend(
                 records,
                 "oracle_calls",
                 "absolute_error",
-                "Visibility-table oracle calls",
-                "Absolute error",
-            ),
-        ),
-        ("rmse-vs-oracle-calls", lambda: _rmse_plot(records)),
-        (
-            "error-vs-runtime",
-            lambda: _scatter_by_backend(
-                records, "end_to_end_ms", "absolute_error", "End-to-end time (ms)", "Absolute error"
+                "Realized logical visibility-table lookup calls",
+                "Raw absolute error (exploratory; no aggregation)",
             ),
         ),
         (
-            "runtime-vs-qubits",
-            lambda: _scatter_by_backend(
-                records, "qubit_count", "simulation_ms", "Qubits", "Simulation time (ms)"
-            ),
-        ),
-        (
-            "runtime-vs-circuit-depth",
+            "estimator-phase-vs-logical-oracle-calls",
             lambda: _scatter_by_backend(
                 records,
-                "circuit_depth",
+                "oracle_calls",
                 "simulation_ms",
-                "Maximum transpiled circuit depth",
-                "Simulation time (ms)",
+                "Realized logical visibility-table lookup calls",
+                "Backend estimator phase (ms)",
             ),
         ),
         (
-            "memory-vs-qubits",
+            "end-to-end-vs-logical-oracle-calls",
             lambda: _scatter_by_backend(
                 records,
-                "qubit_count",
-                "peak_memory_bytes",
-                "Qubits",
-                "Process RSS after run (bytes)",
+                "oracle_calls",
+                "end_to_end_ms",
+                "Realized logical visibility-table lookup calls",
+                "Backend end-to-end time (ms)",
             ),
         ),
-        ("end-to-end-latency", lambda: _latency_plot(records)),
-        ("cpu-vs-intel-gpu", lambda: _cpu_gpu_plot(records)),
+        (
+            "max-circuit-depth-vs-logical-oracle-calls",
+            lambda: _scatter_by_backend(
+                records,
+                "oracle_calls",
+                "circuit_depth",
+                "Realized logical visibility-table lookup calls",
+                "Maximum analysis-transpiled quantum depth",
+            ),
+        ),
+        (
+            "max-gate-count-vs-logical-oracle-calls",
+            lambda: _scatter_by_backend(
+                records,
+                "oracle_calls",
+                "gate_count",
+                "Realized logical visibility-table lookup calls",
+                "Maximum analysis-transpiled quantum gate count",
+            ),
+        ),
+        (
+            "shot-weighted-gates-vs-logical-oracle-calls",
+            lambda: _metadata_scatter_by_backend(
+                records,
+                "shot_weighted_transpiled_quantum_gate_count",
+                "Realized logical visibility-table lookup calls",
+                "Shot-weighted analysis-transpiled quantum gates",
+            ),
+        ),
     ]
     generated: list[Path] = []
     skipped: list[str] = []
@@ -200,5 +185,11 @@ def generate_plots(
         if figure is None:
             skipped.append(name)
             continue
+        figure.suptitle(
+            "Exploratory raw benchmark plot — "
+            f"ok={status_counts['ok']}, failed={status_counts['failed']}, "
+            f"skipped={status_counts['skipped']}",
+            fontsize=9,
+        )
         generated.extend(_save(figure, output_dir, stem, name))
     return PlotReport(tuple(generated), tuple(skipped))

@@ -19,9 +19,11 @@ def wilson_interval(successes: int, samples: int, level: float) -> tuple[float, 
     proportion = successes / samples
     denominator = 1 + z * z / samples
     center = (proportion + z * z / (2 * samples)) / denominator
-    spread = z * math.sqrt(
-        proportion * (1 - proportion) / samples + z * z / (4 * samples * samples)
-    ) / denominator
+    spread = (
+        z
+        * math.sqrt(proportion * (1 - proportion) / samples + z * z / (4 * samples * samples))
+        / denominator
+    )
     return max(0.0, center - spread), min(1.0, center + spread)
 
 
@@ -34,8 +36,9 @@ class ClassicalMonteCarloBackend:
     def estimate(self, request: LightingRequest) -> LightingResult:
         started = perf_counter_ns()
         table = visibility_table(request)
+        table_completed = perf_counter_ns()
         truth = sum(table) / len(table)
-        initialized = perf_counter_ns()
+        truth_completed = perf_counter_ns()
 
         samples = request.max_oracle_calls
         rng = random.Random(request.seed)
@@ -49,8 +52,8 @@ class ClassicalMonteCarloBackend:
             estimate=estimate,
             truth=truth,
             oracle_calls=samples,
-            initialization_ms=(initialized - started) / 1e6,
-            simulation_ms=(completed - initialized) / 1e6,
+            initialization_ms=(truth_completed - started) / 1e6,
+            simulation_ms=(completed - truth_completed) / 1e6,
             end_to_end_ms=(completed - started) / 1e6,
             confidence_interval=ConfidenceInterval(
                 low=low,
@@ -63,6 +66,14 @@ class ClassicalMonteCarloBackend:
                 "sampling": "with_replacement",
                 "seed": request.seed,
                 "visibility_table_entries": len(table),
+                "classical_table_build_rays": len(table),
+                "classical_ground_truth_table_reads": len(table),
+                "oracle_accounting": "one logical visibility-table lookup per sampled index",
+                "ground_truth_in_end_to_end_timing": True,
+                "phase_timings_ms": {
+                    "classical_visibility_table_dda": (table_completed - started) / 1e6,
+                    "ground_truth_reduction": (truth_completed - table_completed) / 1e6,
+                    "sampling_and_wilson_interval": (completed - truth_completed) / 1e6,
+                },
             },
         )
-

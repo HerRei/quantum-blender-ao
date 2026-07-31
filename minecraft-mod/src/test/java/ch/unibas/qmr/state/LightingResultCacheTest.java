@@ -38,5 +38,20 @@ class LightingResultCacheTest {
         assertTrue(cache.isPending());
         assertTrue(cache.lastValid().isEmpty());
     }
-}
 
+    @Test
+    void resetRemovesLastGoodErrorAndInFlightRequest() {
+        LightingResultCache cache = new LightingResultCache();
+        UUID first = UUID.randomUUID();
+        cache.tryStart(first);
+        cache.complete(first, TestFixtures.result(first, 0.75), 1);
+        UUID second = UUID.randomUUID();
+        cache.tryStart(second);
+
+        cache.reset();
+
+        assertFalse(cache.isPending());
+        assertTrue(cache.lastValid().isEmpty());
+        assertTrue(cache.lastError().isEmpty());
+    }
+}

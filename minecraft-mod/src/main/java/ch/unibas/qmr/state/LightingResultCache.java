@@ -52,6 +52,13 @@ public final class LightingResultCache {
         return inFlight != null;
     }
 
+    /** Invalidates in-flight callbacks and removes results tied to the previous client level. */
+    public synchronized void reset() {
+        lastValid = null;
+        inFlight = null;
+        lastError = null;
+    }
+
     private static String rootMessage(Throwable error) {
         Throwable current = error;
         while (current.getCause() != null) {
@@ -60,4 +67,3 @@ public final class LightingResultCache {
         return current.getClass().getSimpleName() + ": " + current.getMessage();
     }
 }
-

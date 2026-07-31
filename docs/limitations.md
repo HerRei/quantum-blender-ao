@@ -15,6 +15,13 @@ not weaken these qualifications.
   cost or practical quantum advantage.
 - Only small powers-of-two direction counts (8--64) are in the initial study.
   They are not production-quality ambient-occlusion sampling.
+- Once the logical budget reaches `N`, exact enumeration of the explicit table
+  has zero error and dominates iid sampling with replacement. Most points in the
+  original course matrix are in this regime, so it is not a valid query-advantage
+  matrix.
+- With the checked-in `desired_accuracy=0.05`, the MLAE schedule saturates at
+  `[0,1,2,4,8]`; additional budget increases shots but not maximum Grover power.
+  That configuration cannot establish asymptotic `1/M` behavior.
 - The binary oracle ignores graded transparency, emitted radiance, multiple
   bounces, distance falloff, materials, and temporal/spatial denoising.
 - Synthesizing arbitrary lookup tables can require substantial gates. Query
@@ -25,8 +32,9 @@ not weaken these qualifications.
 
 - Small seed sets are software smoke tests, not inferential evidence.
 - Wilson intervals describe the Monte Carlo Bernoulli proportion under its
-  sampling model. Quantum likelihood intervals have different calibration and
-  must not be compared as if identical.
+  sampling model. The MLAE interval is an asymptotic likelihood-ratio outer hull;
+  finite-shot and boundary coverage is not guaranteed. These intervals must not
+  be compared as if identically calibrated.
 - Relative error is undefined for zero ground truth.
 - Scene families are synthetic and may not represent the distribution of real
   player viewpoints.
@@ -35,9 +43,10 @@ not weaken these qualifications.
 ## Current validation boundary (2026-07-31)
 
 On an Apple-Silicon MacBook, the Python scientific tests, service integration
-tests, a small measured smoke benchmark, plot generation, Java unit tests, and
-Fabric build have run. The generated smoke measurements are intentionally not
-committed and are not research results.
+tests, a small measured smoke benchmark, audit experiments, plot generation,
+Java unit tests, and Fabric build have run. The generated smoke measurements are
+not committed and are not research results; only the explicitly labelled audit
+bundle is archived with its analytical-versus-measured boundary.
 
 The following have not been tested:
 
@@ -90,4 +99,3 @@ Before publishing a result, state:
 - actual device, driver, precision, negotiated PCIe link, and ReBAR state;
 - timing boundaries and synchronization method; and
 - that classical quantum simulation does not demonstrate quantum speed-up.
-

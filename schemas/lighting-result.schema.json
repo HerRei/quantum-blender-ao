@@ -25,12 +25,13 @@
     "end_to_end_ms",
     "warnings",
     "hardware",
-    "software"
+    "software",
+    "metadata"
   ],
   "properties": {
     "schema_version": {"const": "1.0"},
     "request_id": {"type": "string", "format": "uuid"},
-    "backend": {"type": "string", "minLength": 1},
+    "backend": {"type": "string", "minLength": 1, "pattern": "\\S"},
     "estimate": {"type": "number", "minimum": 0, "maximum": 1},
     "ground_truth": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
     "absolute_error": {"type": ["number", "null"], "minimum": 0},
@@ -46,7 +47,7 @@
             "low": {"type": "number", "minimum": 0, "maximum": 1},
             "high": {"type": "number", "minimum": 0, "maximum": 1},
             "level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
-            "method": {"type": "string"}
+            "method": {"type": "string", "minLength": 1, "pattern": "\\S"}
           }
         }
       ]
@@ -61,6 +62,7 @@
     "simulation_ms": {"type": "number", "minimum": 0},
     "transfer_ms": {"type": ["number", "null"], "minimum": 0},
     "end_to_end_ms": {"type": "number", "minimum": 0},
+    "process_rss_bytes": {"type": ["integer", "null"], "minimum": 0},
     "peak_memory_bytes": {"type": ["integer", "null"], "minimum": 0},
     "warnings": {"type": "array", "items": {"type": "string"}},
     "hardware": {"type": "object", "additionalProperties": true},
@@ -68,4 +70,3 @@
     "metadata": {"type": "object", "additionalProperties": true}
   }
 }
-

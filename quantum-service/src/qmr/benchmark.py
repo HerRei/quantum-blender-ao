@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from itertools import product
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 import yaml
@@ -21,6 +21,9 @@ from qmr.models import Algorithm, LightingResult, StrictModel
 from qmr.plots import PlotReport, generate_plots
 from qmr.scenes import all_scenes
 
+OracleBudget = Annotated[int, Field(ge=1)]
+RandomSeed = Annotated[int, Field(ge=0, le=2**32 - 1)]
+
 
 class BenchmarkConfig(StrictModel):
     schema_version: Literal["1.0"] = "1.0"
@@ -28,8 +31,8 @@ class BenchmarkConfig(StrictModel):
     scenes: list[str] = Field(min_length=1)
     backends: list[Algorithm] = Field(min_length=1)
     direction_counts: list[Literal[8, 16, 32, 64]] = Field(min_length=1)
-    oracle_budgets: list[int] = Field(min_length=1)
-    seeds: list[int] = Field(min_length=1)
+    oracle_budgets: list[OracleBudget] = Field(min_length=1)
+    seeds: list[RandomSeed] = Field(min_length=1)
     desired_accuracy: float = Field(default=0.05, gt=0, le=0.5)
     confidence_level: float = Field(default=0.95, gt=0, lt=1)
     generate_plots: bool = True
@@ -64,7 +67,7 @@ def _record(
     direction_count: int,
     backend: Algorithm,
     seed: int,
-    budget: int,
+    budget: int | None,
     status: str,
     result: LightingResult | None = None,
     error: str | None = None,
@@ -79,7 +82,7 @@ def _record(
         "seed": seed,
         "requested_oracle_budget": budget,
         "desired_accuracy": config.desired_accuracy,
-        "confidence_level": config.confidence_level,
+        "requested_confidence_level": config.confidence_level,
         "status": status,
         "error": error,
         "result": result.model_dump(mode="json") if result else None,
@@ -98,7 +101,7 @@ def _flatten(record: dict[str, Any]) -> dict[str, Any]:
         else:
             flat[key] = value
     if isinstance(interval, dict):
-        flat.update({f"confidence_{key}": value for key, value in interval.items()})
+        flat.update({f"result_confidence_interval_{key}": value for key, value in interval.items()})
     return flat
 
 
@@ -137,9 +140,9 @@ def run_benchmark(config: BenchmarkConfig, output_dir: Path) -> BenchmarkArtifac
         scene = known_scenes[scene_name]
         backend = create_backend(backend_name)
         capability = backend.capability()
-        combinations: list[tuple[int, int]]
+        combinations: list[tuple[int, int | None]]
         if backend_name == Algorithm.EXACT:
-            combinations = [(config.seeds[0], direction_count)]
+            combinations = [(config.seeds[0], None)]
         else:
             combinations = list(product(config.seeds, config.oracle_budgets))
 
@@ -163,7 +166,8 @@ def run_benchmark(config: BenchmarkConfig, output_dir: Path) -> BenchmarkArtifac
                 algorithm=backend_name,
                 seed=seed,
                 desired_accuracy=config.desired_accuracy,
-                max_oracle_calls=budget,
+                confidence_level=config.confidence_level,
+                max_oracle_calls=direction_count if budget is None else budget,
             )
             try:
                 result = backend.estimate(request)

@@ -12,15 +12,19 @@ For a fixed set of `N` hemisphere directions and a binary visibility table
 A = (1 / N) * sum_i f(i).
 ```
 
-The primary independent variable is the budget of calls to `f`. The primary
-error measure is absolute error against the exact table mean. Real runtime is a
-separate outcome, not a proxy for query complexity.
+The primary independent variable is the realized budget of calls to `f`. The
+primary error measures are bias, sample standard deviation, and RMSE against the
+exact table mean. Real runtime is a separate outcome, not a proxy for query
+complexity. Because the implemented domain has at most 64 entries, exact
+enumeration is a mandatory classical control: no MC/QAE comparison at `M >= N`
+can establish an advantage over the best obvious classical method.
 
 ## Operational hypotheses
 
-- **H1 (query error):** over a predefined family of visibility tables, CPU
-  quantum amplitude estimation reaches lower RMSE than classical Monte Carlo at
-  some matched oracle-query budgets.
+- **H1 (query error):** over a predefined family of visibility tables with
+  `N >> M`, CPU quantum amplitude estimation reaches lower RMSE than iid Monte
+  Carlo at some matched *realized* oracle-query budgets, while exact enumeration
+  remains a separate finite-domain control.
 - **H0:** it does not.
 - **H2 (simulator cost):** even if H1 is supported in query space, a classical
   quantum simulator is expected to have materially higher wall-clock and memory
@@ -64,10 +68,11 @@ The metrics are not interchangeable:
 - **Circuit execution:** one distinct circuit/batch submission in the estimator
   schedule, reported independently from shots.
 
-The implementation computes a schedule that fits the requested maximum before
-submitting it. It never labels shots alone as oracle calls. Gate count and depth
-are reported from transpiled circuits, but they are not substituted for query
-count.
+The implementation computes a fixed schedule that fits the requested maximum
+before submitting it. It never labels shots alone as oracle calls. Desired
+accuracy heuristically caps the maximum Grover power; it is not an achieved-
+error stopping rule. Gate count and depth come from separately transpiled
+analysis circuits and are not substituted for query count.
 
 ## Ground truth and errors
 
@@ -82,8 +87,8 @@ RMSE = sqrt(mean((a_hat - A)^2))
 
 Relative error is undefined at zero and is therefore stored as null rather than
 infinity. Confidence intervals are method-specific: Wilson score for Bernoulli
-Monte Carlo, likelihood-derived for the quantum estimator where available, and
-a degenerate interval for exact counting.
+Monte Carlo and an asymptotically calibrated likelihood-ratio outer interval for
+MLAE. Exact counting reports no sampling interval.
 
 ## What the experiment can conclude
 
@@ -97,4 +102,3 @@ Any later claim about the A770 must identify the exact runtime, driver, device,
 precision, PCIe link, state residency, and correctness checks. Any later claim
 about a real QPU must also account for compilation, queueing, noise mitigation,
 and provider execution semantics.
-

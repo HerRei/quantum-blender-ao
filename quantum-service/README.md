@@ -29,6 +29,11 @@ MLAE was selected over phase-estimation QAE and the library's adaptive IAE for
 the initial benchmark because it uses no evaluation register and its complete
 schedule can be bounded before execution. Qiskit's simulator samples circuit
 measurements; the backend never reads statevector probabilities as its answer.
+The planner is non-adaptive: `desired_accuracy` heuristically caps maximum
+Grover power and is not an achieved-error stopping guarantee. The reported
+likelihood-ratio interval uses asymptotic calibration. See the
+[independent audit](../docs/scientific-audit.md) before interpreting query or
+runtime results.
 
 Start the local service:
 
