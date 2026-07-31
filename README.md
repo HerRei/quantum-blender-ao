@@ -60,6 +60,11 @@ voxel extraction, asynchronous HTTP handling, timeout/error behavior, last-good
 result caching, key controls, and a debug HUD. The client itself has not been
 launched because Minecraft is not installed.
 
+The optional Iris-compatible shaderpack is a pass-through scaffold with a
+manual diagnostic control. Official Iris documentation does not expose a stable
+arbitrary mod-uniform injection API, so live service values remain in the
+working HUD rather than relying on Iris internals.
+
 ## Synthetic benchmark
 
 ```bash

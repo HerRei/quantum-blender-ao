@@ -1,0 +1,7 @@
+option.QMR_EXPERIMENTAL_LIGHTING=Experimental visibility multiplier
+value.QMR_EXPERIMENTAL_LIGHTING.0=Off (safe default)
+value.QMR_EXPERIMENTAL_LIGHTING.1=On (manual diagnostic)
+option.QMR_MANUAL_VISIBILITY=Manual visibility percent
+option.QMR_BLEND_PERCENT=Effect blend percent
+comment.QMR_MANUAL_VISIBILITY=Manual test input; it is not supplied by the Fabric mod.
+
