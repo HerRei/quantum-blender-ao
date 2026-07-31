@@ -51,6 +51,10 @@ Monte Carlo baselines, finite-shot CPU quantum amplitude estimation, and an
 explicitly unavailable Intel GPU adapter boundary. The benchmark runner exports
 CSV/JSONL and produces PNG/PDF plots from measured records only.
 
+The local FastAPI service exposes `GET /health`, `GET /capabilities`,
+`POST /lighting/estimate`, and `POST /benchmark/run`. CPU-heavy calls execute
+off the event-loop thread with configurable concurrency and timeout limits.
+
 ## Synthetic benchmark
 
 ```bash

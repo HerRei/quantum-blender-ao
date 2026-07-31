@@ -29,3 +29,16 @@ MLAE was selected over phase-estimation QAE and the library's adaptive IAE for
 the initial benchmark because it uses no evaluation register and its complete
 schedule can be bounded before execution. Qiskit's simulator samples circuit
 measurements; the backend never reads statevector probabilities as its answer.
+
+Start the local service:
+
+```bash
+uv run qmr serve --config config.toml
+curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/capabilities
+```
+
+`POST /lighting/estimate` honors the request's algorithm when
+`backend.name = "request"`; setting a concrete name enforces that backend.
+Synchronous simulator work runs in worker threads behind a concurrency limit,
+so it does not block the ASGI event loop.

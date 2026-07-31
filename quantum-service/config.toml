@@ -1,0 +1,14 @@
+host = "127.0.0.1"
+port = 8080
+request_timeout_seconds = 30.0
+max_concurrent_requests = 2
+benchmark_output_dir = "../experiments/results"
+log_level = "INFO"
+
+[backend]
+# "request" honors each request's algorithm; set a backend name to enforce one.
+name = "request"
+device_index = 0
+precision = "float32"
+max_qubits = 20
+

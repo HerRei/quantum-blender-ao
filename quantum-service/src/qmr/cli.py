@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from qmr.benchmark import BenchmarkConfig, load_jsonl, run_benchmark
+from qmr.config import load_settings
 from qmr.plots import generate_plots
 from qmr.scenes import all_scenes
 
@@ -25,6 +26,9 @@ def _parser() -> argparse.ArgumentParser:
     plot.add_argument("--input", type=Path, required=True)
     plot.add_argument("--output-dir", type=Path, required=True)
     plot.add_argument("--stem", default="benchmark")
+
+    serve = commands.add_parser("serve", help="run the local HTTP service")
+    serve.add_argument("--config", type=Path)
     return parser
 
 
@@ -60,6 +64,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             "skipped": report.skipped,
         }
         print(json.dumps(payload, indent=2))
+        return 0
+    if args.command == "serve":
+        import uvicorn
+
+        from qmr.api import create_app
+
+        settings = load_settings(args.config)
+        uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
         return 0
     raise AssertionError("unreachable command")
 
