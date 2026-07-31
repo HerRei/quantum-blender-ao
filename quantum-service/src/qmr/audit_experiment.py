@@ -22,6 +22,7 @@ import statistics
 import subprocess
 import sys
 import tomllib
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -71,8 +72,11 @@ TABLE_LAYOUT: Literal["contiguous_prefix_visible_then_blocked"] = (
     "contiguous_prefix_visible_then_blocked"
 )
 AUDIT_SOURCE_PATHS = (
+    "quantum-service/pyproject.toml",
     "quantum-service/src/qmr/audit_experiment.py",
     "quantum-service/src/qmr/backends/cpu_quantum.py",
+    "quantum-service/src/qmr/backends/monte_carlo.py",
+    "quantum-service/uv.lock",
 )
 ANALYTICAL_MODEL = (
     "analytical measurement model: finite-shot binomial circuit outcomes; "
@@ -633,6 +637,7 @@ def aggregate_analytical_records(
                 "bias": statistics.fmean(errors) if errors else None,
                 "rmse": math.sqrt(statistics.fmean(squared_errors)) if squared_errors else None,
                 "sample_std": statistics.stdev(estimates) if len(estimates) >= 2 else None,
+                "sample_variance": statistics.variance(estimates) if len(estimates) >= 2 else None,
                 "mean_absolute_error": statistics.fmean(abs(error) for error in errors)
                 if errors
                 else None,
@@ -788,6 +793,7 @@ def exact_statistical_control(config: AuditExperimentConfig) -> list[dict[str, A
             "bias": 0.0,
             "rmse": 0.0,
             "sample_std": 0.0,
+            "sample_variance": 0.0,
             "mean_absolute_error": 0.0,
             "empirical_ci_coverage": 1.0,
             "mean_ci_width": 0.0,
@@ -896,6 +902,9 @@ def _transpiled_resource_metrics(
         "per_circuit_transpiled_metrics": details,
         "transpilation_basis_gates": ["u", "cx"],
         "transpilation_optimization_level": 0,
+        "transpilation_target": (
+            "none; all-to-all analysis without a backend target or coupling map"
+        ),
     }
 
 
@@ -950,6 +959,7 @@ def _runtime_record_base(
         ),
         "status": "ok",
         "error": None,
+        "runtime_warnings": [],
     }
 
 
@@ -987,25 +997,35 @@ def _run_qiskit_runtime_record(
         )
         setup_completed = perf_counter_ns()
 
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always")
+            estimator_started = perf_counter_ns()
+            algorithm_result = algorithm.estimate(problem)
+            estimator_completed = perf_counter_ns()
+
+            interval_started = perf_counter_ns()
+            confidence = algorithm.compute_confidence_interval(
+                algorithm_result,
+                alpha=1 - config.confidence_level,
+                kind="likelihood_ratio",
+            )
+            interval_completed = perf_counter_ns()
+
+        # Resource-analysis copies are intentionally constructed only after the
+        # operational method has completed, so they cannot warm caches or alter
+        # the timed estimator/interval phases.
         transpilation_started = perf_counter_ns()
         metrics = _transpiled_resource_metrics(
             algorithm, problem, design, int(record["sampling_seed"])
         )
         transpilation_completed = perf_counter_ns()
-
-        estimator_started = perf_counter_ns()
-        algorithm_result = algorithm.estimate(problem)
-        estimator_completed = perf_counter_ns()
-
-        interval_started = perf_counter_ns()
-        confidence = algorithm.compute_confidence_interval(
-            algorithm_result,
-            alpha=1 - config.confidence_level,
-            kind="likelihood_ratio",
-        )
-        interval_completed = perf_counter_ns()
         estimate = float(algorithm_result.estimation)
         signed_error = estimate - amplitude
+        synthesis_ms = (synthesis_completed - synthesis_started) / 1e6
+        setup_ms = (setup_completed - setup_started) / 1e6
+        estimator_ms = (estimator_completed - estimator_started) / 1e6
+        interval_ms = (interval_completed - interval_started) / 1e6
+        operational_ms = (interval_completed - started) / 1e6
         record.update(
             {
                 "estimate": estimate,
@@ -1023,14 +1043,17 @@ def _run_qiskit_runtime_record(
                 "good_state_markings": design.good_state_markings,
                 "distinct_circuits": design.distinct_circuits,
                 "sampler_jobs": design.sampler_jobs,
-                "oracle_synthesis_ms": (synthesis_completed - synthesis_started) / 1e6,
-                "sampler_algorithm_setup_ms": (setup_completed - setup_started) / 1e6,
+                "oracle_synthesis_ms": synthesis_ms,
+                "sampler_algorithm_setup_ms": setup_ms,
                 "analysis_copy_transpilation_ms": (transpilation_completed - transpilation_started)
                 / 1e6,
-                "estimator_runtime_ms": (estimator_completed - estimator_started) / 1e6,
-                "confidence_interval_postprocessing_ms": (interval_completed - interval_started)
-                / 1e6,
-                "audit_end_to_end_ms": (interval_completed - started) / 1e6,
+                "estimator_runtime_ms": estimator_ms,
+                "confidence_interval_postprocessing_ms": interval_ms,
+                "operational_method_runtime_ms": operational_ms,
+                "audit_end_to_end_ms": (transpilation_completed - started) / 1e6,
+                "runtime_warnings": [
+                    f"{item.category.__name__}: {item.message}" for item in caught_warnings
+                ],
                 **metrics,
             }
         )
@@ -1093,6 +1116,7 @@ def _run_classical_runtime_record(
                 "confidence_interval_method": "wilson_score",
                 "estimator_runtime_ms": (sampling_completed - started) / 1e6,
                 "confidence_interval_postprocessing_ms": (completed - interval_started) / 1e6,
+                "operational_method_runtime_ms": (completed - started) / 1e6,
                 "audit_end_to_end_ms": (completed - started) / 1e6,
             }
         )
@@ -1137,6 +1161,7 @@ def _run_exact_runtime_record(
         "warmup": warmup,
         "status": "ok",
         "error": None,
+        "runtime_warnings": [],
     }
     started = perf_counter_ns()
     try:
@@ -1154,6 +1179,7 @@ def _run_exact_runtime_record(
                 "confidence_interval_method": "degenerate_exact_enumeration",
                 "confidence_interval_covers_truth": estimate == amplitude,
                 "estimator_runtime_ms": (completed - started) / 1e6,
+                "operational_method_runtime_ms": (completed - started) / 1e6,
                 "audit_end_to_end_ms": (completed - started) / 1e6,
             }
         )
@@ -1243,6 +1269,21 @@ def combine_exact_control_summary(
                 "sample_std_estimator_runtime_ms": runtime["sample_std_estimator_runtime_ms"],
                 "min_estimator_runtime_ms": runtime["min_estimator_runtime_ms"],
                 "max_estimator_runtime_ms": runtime["max_estimator_runtime_ms"],
+                "mean_operational_method_runtime_ms": runtime["mean_operational_method_runtime_ms"],
+                "median_operational_method_runtime_ms": runtime[
+                    "median_operational_method_runtime_ms"
+                ],
+                "median_operational_method_runtime_ms_bootstrap_ci_low": runtime[
+                    "median_operational_method_runtime_ms_bootstrap_ci_low"
+                ],
+                "median_operational_method_runtime_ms_bootstrap_ci_high": runtime[
+                    "median_operational_method_runtime_ms_bootstrap_ci_high"
+                ],
+                "sample_std_operational_method_runtime_ms": runtime[
+                    "sample_std_operational_method_runtime_ms"
+                ],
+                "min_operational_method_runtime_ms": runtime["min_operational_method_runtime_ms"],
+                "max_operational_method_runtime_ms": runtime["max_operational_method_runtime_ms"],
                 "mean_audit_end_to_end_ms": runtime["mean_audit_end_to_end_ms"],
                 "median_audit_end_to_end_ms": runtime["median_audit_end_to_end_ms"],
                 "median_audit_end_to_end_ms_bootstrap_ci_low": runtime[
@@ -1390,6 +1431,9 @@ def aggregate_runtime_records(
             if not bool(record.get("warmup")) and record.get("status") != "ok"
         ]
         runtimes = [float(record["estimator_runtime_ms"]) for record in measured]
+        operational_runtimes = [
+            float(record["operational_method_runtime_ms"]) for record in measured
+        ]
         end_to_end = [float(record["audit_end_to_end_ms"]) for record in measured]
         first = measured[0] if measured else candidates[0]
         group_seed = _derived_seed(
@@ -1408,17 +1452,24 @@ def aggregate_runtime_records(
             bootstrap_estimator_medians = np.median(
                 np.asarray(runtimes, dtype=np.float64)[sampled_indices], axis=1
             )
+            bootstrap_operational_medians = np.median(
+                np.asarray(operational_runtimes, dtype=np.float64)[sampled_indices], axis=1
+            )
             bootstrap_end_to_end_medians = np.median(
                 np.asarray(end_to_end, dtype=np.float64)[sampled_indices], axis=1
             )
             estimator_low, estimator_high = _percentile_interval(
                 bootstrap_estimator_medians, bootstrap_confidence_level
             )
+            operational_low, operational_high = _percentile_interval(
+                bootstrap_operational_medians, bootstrap_confidence_level
+            )
             end_to_end_low, end_to_end_high = _percentile_interval(
                 bootstrap_end_to_end_medians, bootstrap_confidence_level
             )
         else:
             estimator_low = estimator_high = None
+            operational_low = operational_high = None
             end_to_end_low = end_to_end_high = None
         measured_requested = sum(not bool(record.get("warmup")) for record in candidates)
         phase_medians = {
@@ -1468,6 +1519,25 @@ def aggregate_runtime_records(
                 else None,
                 "min_estimator_runtime_ms": min(runtimes) if runtimes else None,
                 "max_estimator_runtime_ms": max(runtimes) if runtimes else None,
+                "mean_operational_method_runtime_ms": (
+                    statistics.fmean(operational_runtimes) if operational_runtimes else None
+                ),
+                "median_operational_method_runtime_ms": (
+                    statistics.median(operational_runtimes) if operational_runtimes else None
+                ),
+                "median_operational_method_runtime_ms_bootstrap_ci_low": operational_low,
+                "median_operational_method_runtime_ms_bootstrap_ci_high": operational_high,
+                "sample_std_operational_method_runtime_ms": (
+                    statistics.stdev(operational_runtimes)
+                    if len(operational_runtimes) >= 2
+                    else None
+                ),
+                "min_operational_method_runtime_ms": (
+                    min(operational_runtimes) if operational_runtimes else None
+                ),
+                "max_operational_method_runtime_ms": (
+                    max(operational_runtimes) if operational_runtimes else None
+                ),
                 "mean_audit_end_to_end_ms": statistics.fmean(end_to_end) if end_to_end else None,
                 "median_audit_end_to_end_ms": statistics.median(end_to_end) if end_to_end else None,
                 "median_audit_end_to_end_ms_bootstrap_ci_low": end_to_end_low,
@@ -1545,9 +1615,9 @@ def _two_method_plot(
             "sample_std_bootstrap_ci_low",
             "sample_std_bootstrap_ci_high",
         ),
-        "median_audit_end_to_end_ms": (
-            "median_audit_end_to_end_ms_bootstrap_ci_low",
-            "median_audit_end_to_end_ms_bootstrap_ci_high",
+        "median_operational_method_runtime_ms": (
+            "median_operational_method_runtime_ms_bootstrap_ci_low",
+            "median_operational_method_runtime_ms_bootstrap_ci_high",
         ),
     }
     for axis, (method, title) in zip(axes, methods, strict=True):
@@ -1742,8 +1812,8 @@ def generate_audit_plots(
             _two_method_plot(
                 runtime_summary,
                 methods=runtime_methods,
-                y_key="median_audit_end_to_end_ms",
-                ylabel="Measured audit end-to-end runtime (ms), median",
+                y_key="median_operational_method_runtime_ms",
+                ylabel="Measured operational method runtime (ms), median",
                 y_scale="log",
             ),
             output_dir,
@@ -2033,12 +2103,24 @@ def build_bundle_manifest(
             "classical_monte_carlo": "Wilson score interval",
             "exact_enumeration": "degenerate exact interval [a, a]",
         },
+        "statistical_metric_definitions": {
+            "mean_estimate": "arithmetic mean of successful replicate estimates",
+            "bias": "mean_estimate minus the exact amplitude",
+            "sample_variance": "unbiased replicate-estimate variance with denominator n-1",
+            "sample_std": "square root of sample_variance",
+            "rmse": "square root of the mean squared error against the exact amplitude",
+        },
         "bootstrap_protocol": {
             "method": "deterministic nonparametric percentile bootstrap",
             "replicates": config.bootstrap_replicates,
             "confidence_level": config.bootstrap_confidence_level,
             "base_seed": config.bootstrap_seed,
-            "point_metrics": ["bias", "rmse", "sample_std", "runtime_median"],
+            "point_metrics": [
+                "bias",
+                "rmse",
+                "sample_std",
+                "operational_method_runtime_median",
+            ],
             "slope_resampling": (
                 "joint replicate identifiers are resampled once and reused across every "
                 "preregistered budget; a slope resample is invalid if any RMSE is zero"
@@ -2060,10 +2142,12 @@ def build_bundle_manifest(
             "grover_iterations": "shots_per_circuit * sum(k)",
             "gate_count": (
                 "u/cx basis quantum gates only; barrier and measurement excluded; max, "
-                "schedule sum, and shot-weighted schedule sum reported separately"
+                "schedule sum, and shot-weighted schedule sum reported separately; all-to-all "
+                "analysis with no backend target or coupling map"
             ),
             "circuit_depth": (
-                "maximum quantum-operation depth among separately transpiled schedule circuits"
+                "maximum quantum-operation depth among separately transpiled schedule circuits; "
+                "all-to-all analysis with no backend target or coupling map"
             ),
         },
         "timer_definitions": {
@@ -2074,7 +2158,8 @@ def build_bundle_manifest(
             ),
             "oracle_synthesis_ms": "build_estimation_problem(table)",
             "analysis_copy_transpilation_ms": (
-                "construct and optimization_level=0 transpile resource-analysis circuit copies"
+                "after the operational method timer, construct and optimization_level=0 "
+                "transpile resource-analysis circuit copies without a backend target/coupling map"
             ),
             "estimator_runtime_ms_qiskit": (
                 "MaximumLikelihoodAmplitudeEstimation.estimate; includes primitive circuit "
@@ -2086,17 +2171,25 @@ def build_bundle_manifest(
                 "method-specific confidence-interval call after the estimator timer; Qiskit "
                 "likelihood-ratio for MLAE and Wilson score for MC"
             ),
+            "operational_method_runtime_ms": (
+                "contiguous wall-clock runtime from a supplied table needed to return the method "
+                "result: oracle synthesis, sampler/algorithm setup, estimator, and confidence "
+                "interval for Qiskit; sampling plus Wilson interval for MC; summation for exact. "
+                "Excludes the later audit-only analysis-copy transpilation."
+            ),
             "audit_end_to_end_ms": (
-                "sum of the explicitly executed audit phases for one runtime record; excludes "
-                "raw-file serialization and manifest collection"
+                "all explicitly executed audit phases for one runtime record, including the "
+                "audit-only resource-analysis transpilation; excludes raw-file serialization "
+                "and manifest collection"
             ),
             "warmup_policy": (
                 "warmup records are retained with warmup=true and excluded from runtime summary; "
                 "they exercise lazy runtime initialization after imports and do not measure imports"
             ),
             "runtime_plot_metric": (
-                "median audit_end_to_end_ms with deterministic percentile-bootstrap interval; "
-                "median estimator_runtime_ms remains available as a separately labelled core time"
+                "median operational_method_runtime_ms with deterministic percentile-bootstrap "
+                "interval; estimator core, audit-only transpilation, and full audit end-to-end "
+                "remain separately archived"
             ),
         },
         "runtime_order_protocol": {
@@ -2117,7 +2210,10 @@ def build_bundle_manifest(
         },
         "outlier_policy": {
             "removal_or_winsorization": "none",
-            "raw_archive": "every successful, failed, and warmup record is retained",
+            "raw_archive": (
+                "every successful, failed, and warmup record is retained; captured runtime "
+                "warnings remain attached to their raw records"
+            ),
             "summary_exclusions": (
                 "only records explicitly marked warmup are excluded by design; failed records "
                 "without a valid metric are separately counted and never silently imputed"
@@ -2157,7 +2253,21 @@ def build_bundle_manifest(
             "runtime_total_including_warmup": len(runtime_records),
             "runtime_failed": sum(record.get("status") != "ok" for record in runtime_records),
             "runtime_warmup": sum(bool(record.get("warmup")) for record in runtime_records),
+            "runtime_warning_records": sum(
+                bool(record.get("runtime_warnings")) for record in runtime_records
+            ),
+            "runtime_warning_total": sum(
+                len(cast(list[Any], record.get("runtime_warnings", [])))
+                for record in runtime_records
+            ),
         },
+        "runtime_warning_messages": sorted(
+            {
+                str(message)
+                for record in runtime_records
+                for message in cast(list[Any], record.get("runtime_warnings", []))
+            }
+        ),
         "plot_protocol": {
             "figure_count": len(PLOT_NAMES),
             "names": list(PLOT_NAMES),
@@ -2176,7 +2286,7 @@ def build_bundle_manifest(
             ),
             "uncertainty": (
                 "deterministic 95% percentile-bootstrap bands for bias, RMSE, sample standard "
-                "deviation, and runtime median"
+                "deviation, and operational-method runtime median"
             ),
             "failure_counts_visible": True,
         },

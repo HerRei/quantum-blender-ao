@@ -18,6 +18,7 @@ from qmr.audit_experiment import (
     PLOT_NAMES,
     AuditExperimentConfig,
     FixedGridMlae,
+    _run_qiskit_runtime_record,
     aggregate_analytical_records,
     aggregate_runtime_records,
     assert_clean_worktree,
@@ -252,6 +253,7 @@ def test_aggregation_computes_bias_rmse_sample_std_and_full_range_slope() -> Non
     assert summary[0]["bias"] == pytest.approx(0.0)
     assert summary[0]["rmse"] == pytest.approx(0.1)
     assert summary[0]["sample_std"] == pytest.approx(math.sqrt(0.02))
+    assert summary[0]["sample_variance"] == pytest.approx(0.02)
     assert summary[1]["rmse"] == pytest.approx(0.05)
     assert summary[0]["full_range_loglog_rmse_slope"] == pytest.approx(-1.0)
     assert summary[0]["full_range_loglog_rmse_slope_bootstrap_ci_low"] == pytest.approx(-1.0)
@@ -288,6 +290,7 @@ def test_runtime_summary_bootstraps_end_to_end_and_preserves_phase_medians_and_f
             "repeat": 0,
             "status": "ok",
             "estimator_runtime_ms": 10.0,
+            "operational_method_runtime_ms": 15.0,
             "audit_end_to_end_ms": 20.0,
             "oracle_synthesis_ms": 1.0,
             "sampler_algorithm_setup_ms": 2.0,
@@ -299,6 +302,7 @@ def test_runtime_summary_bootstraps_end_to_end_and_preserves_phase_medians_and_f
             "repeat": 1,
             "status": "ok",
             "estimator_runtime_ms": 20.0,
+            "operational_method_runtime_ms": 30.0,
             "audit_end_to_end_ms": 40.0,
             "oracle_synthesis_ms": 3.0,
             "sampler_algorithm_setup_ms": 4.0,
@@ -325,6 +329,7 @@ def test_runtime_summary_bootstraps_end_to_end_and_preserves_phase_medians_and_f
     assert row["n_failed"] == 1
     assert row["failure_messages"] == ["SyntheticError: expected test failure"]
     assert row["median_estimator_runtime_ms"] == 15.0
+    assert row["median_operational_method_runtime_ms"] == 22.5
     assert row["median_audit_end_to_end_ms"] == 30.0
     assert row["median_oracle_synthesis_ms"] == 2.0
     assert row["median_sampler_algorithm_setup_ms"] == 3.0
@@ -332,6 +337,29 @@ def test_runtime_summary_bootstraps_end_to_end_and_preserves_phase_medians_and_f
     assert row["median_confidence_interval_postprocessing_ms"] == 5.0
     assert row["median_audit_end_to_end_ms_bootstrap_ci_low"] <= 30.0
     assert row["median_audit_end_to_end_ms_bootstrap_ci_high"] >= 30.0
+    assert row["median_operational_method_runtime_ms_bootstrap_ci_low"] <= 22.5
+    assert row["median_operational_method_runtime_ms_bootstrap_ci_high"] >= 22.5
+
+
+def test_qiskit_runtime_archives_boundary_warning_and_separates_audit_instrumentation() -> None:
+    config = _small_config(amplitude_numerators=[64], requested_oracle_budgets=[32])
+    design = audit_designs(config)[0]
+
+    record = _run_qiskit_runtime_record(
+        config=config,
+        design=design,
+        numerator=64,
+        repeat=0,
+        warmup=False,
+    )
+
+    assert record["status"] == "ok"
+    assert record["runtime_warnings"] == [
+        "RuntimeWarning: divide by zero encountered in scalar divide"
+    ]
+    assert record["operational_method_runtime_ms"] < record["audit_end_to_end_ms"]
+    assert record["analysis_copy_transpilation_ms"] > 0
+    assert "without a backend target or coupling map" in str(record["transpilation_target"])
 
 
 def _plot_summaries() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
@@ -344,6 +372,7 @@ def _plot_summaries() -> tuple[list[dict[str, object]], list[dict[str, object]]]
             "rmse": 0.0,
             "bias": 0.0,
             "sample_std": 0.0,
+            "sample_variance": 0.0,
             "rmse_bootstrap_ci_low": 0.0,
             "rmse_bootstrap_ci_high": 0.0,
             "bias_bootstrap_ci_low": 0.0,
@@ -363,6 +392,9 @@ def _plot_summaries() -> tuple[list[dict[str, object]], list[dict[str, object]]]
             "amplitude_denominator": 64,
             "logical_lookup_oracle_calls": 64,
             "median_estimator_runtime_ms": 0.01,
+            "median_operational_method_runtime_ms": 0.01,
+            "median_operational_method_runtime_ms_bootstrap_ci_low": 0.009,
+            "median_operational_method_runtime_ms_bootstrap_ci_high": 0.011,
             "median_audit_end_to_end_ms": 0.01,
             "median_audit_end_to_end_ms_bootstrap_ci_low": 0.009,
             "median_audit_end_to_end_ms_bootstrap_ci_high": 0.011,
@@ -390,6 +422,7 @@ def _plot_summaries() -> tuple[list[dict[str, object]], list[dict[str, object]]]
                         "rmse": rmse,
                         "bias": 0.0,
                         "sample_std": std,
+                        "sample_variance": std * std,
                         "rmse_bootstrap_ci_low": max(0.0, rmse * 0.9),
                         "rmse_bootstrap_ci_high": rmse * 1.1,
                         "bias_bootstrap_ci_low": -0.001,
@@ -414,6 +447,15 @@ def _plot_summaries() -> tuple[list[dict[str, object]], list[dict[str, object]]]
                         "median_estimator_runtime_ms": 0.2
                         if method == "classical_monte_carlo"
                         else 20.0,
+                        "median_operational_method_runtime_ms": 0.25
+                        if method == "classical_monte_carlo"
+                        else 25.0,
+                        "median_operational_method_runtime_ms_bootstrap_ci_low": 0.2
+                        if method == "classical_monte_carlo"
+                        else 20.0,
+                        "median_operational_method_runtime_ms_bootstrap_ci_high": 0.3
+                        if method == "classical_monte_carlo"
+                        else 30.0,
                         "median_audit_end_to_end_ms": 0.3
                         if method == "classical_monte_carlo"
                         else 30.0,
@@ -488,6 +530,7 @@ def test_plots_can_be_regenerated_from_archived_config_and_three_raw_jsonl_files
             "warmup": False,
             "status": "ok",
             "estimator_runtime_ms": 1.0 if method == "classical_monte_carlo" else 10.0,
+            "operational_method_runtime_ms": 1.5 if method == "classical_monte_carlo" else 15.0,
             "audit_end_to_end_ms": 2.0 if method == "classical_monte_carlo" else 20.0,
             "max_transpiled_quantum_depth": 100 if method == "qiskit_statevector_mlae" else None,
             "max_transpiled_quantum_gate_count": 200
@@ -571,11 +614,17 @@ def test_raw_archive_and_manifest_preserve_required_semantics(tmp_path: Path) ->
     assert manifest["budget_designs"][0]["requested_budget_ge_domain_size"] is False
     assert manifest["budget_designs"][0]["realized_calls_ge_domain_size"] is False
     assert set(manifest["source_sha256"]) == {
+        "quantum-service/pyproject.toml",
         "quantum-service/src/qmr/audit_experiment.py",
         "quantum-service/src/qmr/backends/cpu_quantum.py",
+        "quantum-service/src/qmr/backends/monte_carlo.py",
+        "quantum-service/uv.lock",
     }
     assert all(len(digest) == 64 for digest in manifest["source_sha256"].values())
     assert len(manifest["source_bundle_sha256"]) == 64
+    assert manifest["record_counts"]["runtime_warning_records"] == 0
+    assert manifest["record_counts"]["runtime_warning_total"] == 0
+    assert manifest["runtime_warning_messages"] == []
     assert manifest["truth_tables"] == [
         {
             "amplitude_numerator": 8,
@@ -708,9 +757,13 @@ def test_exact_control_has_zero_error_64_reads_and_marked_warmup() -> None:
     assert all(record["absolute_error"] == 0 for record in raw)
     assert all(record["table_layout"] == "contiguous_prefix_visible_then_blocked" for record in raw)
     assert runtime_summary == repeated_runtime_summary
-    assert all(row["rmse"] == row["bias"] == row["sample_std"] == 0 for row in combined)
+    assert all(
+        row["rmse"] == row["bias"] == row["sample_std"] == row["sample_variance"] == 0
+        for row in combined
+    )
     assert all(row["runtime_n"] == 2 for row in combined)
     assert all(row["median_audit_end_to_end_ms"] is not None for row in combined)
+    assert all(row["median_operational_method_runtime_ms"] is not None for row in combined)
     assert all(
         row["median_audit_end_to_end_ms_bootstrap_ci_low"]
         <= row["median_audit_end_to_end_ms"]
