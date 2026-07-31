@@ -3,11 +3,11 @@
 ## Scope
 
 Quantum Minecraft Rendering is a small research monorepo, not a production
-renderer. Its scientific core asks whether simulated amplitude estimation can
-estimate the mean of a binary ambient-visibility oracle with fewer oracle
-queries than classical Monte Carlo. Minecraft supplies voxel scenes and an
-interactive display, but neither the experiment runner nor any backend depends
-on an installed game.
+renderer. Its scientific core compares simulated amplitude estimation with iid
+Monte Carlo at matched realized logical lookup-query budgets on binary ambient-
+visibility tables; exact enumeration is the mandatory finite-domain control.
+Minecraft supplies voxel scenes and an interactive display, but neither the
+experiment runner nor any backend depends on an installed game.
 
 Version 1 deliberately separates two problems:
 

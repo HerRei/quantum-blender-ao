@@ -2,8 +2,9 @@
 
 ## Primary question
 
-> Can simulated quantum amplitude estimation estimate ambient visibility in
-> voxel scenes using fewer oracle queries than classical Monte Carlo sampling?
+> On classically prepared binary visibility tables, can simulated quantum
+> amplitude estimation obtain lower error than iid Monte Carlo at matched
+> realized logical lookup-query budgets?
 
 For a fixed set of `N` hemisphere directions and a binary visibility table
 `f : {0, ..., N-1} -> {0, 1}`, the target quantity is
@@ -65,8 +66,13 @@ The metrics are not interchangeable:
   accounting includes the lookup work in state preparation and every lookup in
   the Grover iterate according to the implemented circuit schedule.
 - **Shot:** one measurement repetition of a circuit.
-- **Circuit execution:** one distinct circuit/batch submission in the estimator
-  schedule, reported independently from shots.
+- **Distinct power circuit:** one scheduled `A Q^k` circuit publication/template,
+  reported independently from shots.
+- **Sampler job:** one batched primitive submission containing all scheduled
+  power circuits for an estimate.
+
+The retained legacy result field `circuit_executions` denotes the first of these
+quantities, not shot-level hardware repetitions or sampler jobs.
 
 The implementation computes a fixed schedule that fits the requested maximum
 before submitting it. It never labels shots alone as oracle calls. Desired

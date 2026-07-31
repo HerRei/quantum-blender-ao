@@ -1,0 +1,39 @@
+schema_version = "1.0"
+name = "scientific-audit"
+baseline_commit = "a4170570e76db3a9229def731a260112d68d304e"
+
+# Exact amplitudes m/64; order is preregistered and validated by the runner.
+amplitude_denominator = 64
+amplitude_numerators = [0, 1, 8, 32, 56, 63, 64]
+
+# Production plan_budget(max_oracle_calls, desired_accuracy) resolves the
+# actually executed logical U_f/U_f^-1 calls. MC is matched to that realized
+# number, not to this requested upper bound.
+requested_oracle_budgets = [32, 64, 128, 256, 512, 1024]
+desired_accuracy = 0.05
+confidence_level = 0.95
+
+# Statistical results use an analytical finite-shot measurement model. They do
+# not time a statevector simulator and are not represented as QPU results.
+analytical_replicates = 256
+mle_grid_points = 8193
+base_seed = 20260731
+bootstrap_replicates = 2000
+bootstrap_confidence_level = 0.95
+bootstrap_seed = 20260801
+
+# Every m/64 table is encoded as m visible bits followed by 64-m blocked bits.
+# The raw records and manifest store the resulting SHA-256.
+table_layout = "contiguous_prefix_visible_then_blocked"
+
+# These are separate, real Qiskit StatevectorSampler CPU timing runs on the
+# synthesized 64-entry U_f circuits. Warmups remain in raw data but are excluded
+# from the runtime aggregation. Paired MC/Qiskit order is deterministically
+# balanced and stored in every raw timing record.
+runtime_order_seed = 20260802
+runtime_warmup_repeats = 1
+runtime_measured_repeats = 5
+runtime_fail_fast = false
+
+# A scientific long run refuses to start from a dirty Git worktree.
+require_clean_worktree = true

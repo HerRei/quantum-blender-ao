@@ -9,13 +9,16 @@ without Minecraft.
 > **Independent audit — 2026-07-31:** `cpu_quantum` is finite-shot MLAE, but the
 > original course-study matrix and its pooled plots do **not** establish the
 > expected QAE scaling or a query advantage over exact enumeration. Read the
-> [scientific audit](docs/scientific-audit.md) before interpreting benchmark
-> output. The Minecraft client, a physical QPU, and the target GPUs were not run.
+> [scientific audit](docs/scientific-audit.md) and its
+> [committed result bundle](experiments/audit-results/2026-07-31/) before
+> interpreting benchmark output. The Minecraft client, a physical QPU, and the
+> target GPUs were not run.
 
 ## Research question
 
-> Can simulated quantum amplitude estimation estimate ambient visibility in
-> voxel scenes using fewer oracle queries than classical Monte Carlo sampling?
+> Under an explicit visibility-table lookup model, can simulated quantum
+> amplitude estimation obtain lower error than iid Monte Carlo at matched
+> realized logical query budgets?
 
 For fixed hemisphere directions,
 
@@ -35,7 +38,7 @@ demonstrate practical quantum advantage.
 | Component | Local status on Apple Silicon |
 |---|---|
 | Python lint and strict typing | Passed |
-| Python unit/integration/schema/audit tests | 96 passed |
+| Python unit/integration/schema/audit tests | 104 passed |
 | Synthetic benchmark and PNG/PDF plot smoke run | Executed; generated measurements are ignored, not research evidence |
 | Fabric/Gradle build with Java 25 | Passed |
 | Java unit tests | 32 passed during the Fabric build |
@@ -63,10 +66,13 @@ See [limitations](docs/limitations.md) for the full non-claim boundary.
  (manual diagnostics only)
 ```
 
-HTTP calls and simulation never block the Minecraft render thread. Failed or
-timed-out requests preserve the last valid result. AMD and Intel GPUs are
-treated as independent devices; no peer-to-peer transfer is required or
-assumed. The detailed design is in [architecture.md](docs/architecture.md).
+Socket I/O and service simulation are asynchronous and do not block the
+Minecraft render thread. World access, extraction, bit packing, and JSON request
+preparation still run synchronously on the client tick and require in-game
+profiling. Failed or timed-out requests preserve the last valid result. AMD and
+Intel GPUs are treated as independent devices; no peer-to-peer transfer is
+required or assumed. The detailed design is in
+[architecture.md](docs/architecture.md).
 
 ## Implemented scientific core
 
@@ -83,9 +89,9 @@ assumed. The detailed design is in [architecture.md](docs/architecture.md).
   Qiskit `cpu_quantum` backends.
 - Qubit-sparse, non-adaptive maximum-likelihood amplitude estimation without a
   phase-estimation register and without reading exact statevector probabilities.
-- Explicit separation of classical samples, table-oracle calls, shots, circuit
-  executions, transpiled depth/gates, initialization, simulation, transfer, and
-  end-to-end time.
+- Explicit separation of classical samples, table-oracle calls, shots, distinct
+  power-circuit publications, sampler jobs, transpiled depth/gates, operational
+  method time, instrumentation, transfer, and end-to-end time.
 - `mock` fixtures and a capability-aware, unavailable-by-default `intel_gpu`
   adapter—never a silent CPU fallback presented as GPU execution.
 - YAML/TOML benchmark matrices, timestamped CSV/JSONL, and measured-data-only
@@ -101,10 +107,11 @@ The precise comparison and accounting rules are in
   FastAPI service
 - [`minecraft-mod/`](minecraft-mod/): Fabric client, HTTP integration, cache,
   controls, HUD, and Java tests
-- [`shaderpack/`](shaderpack/): optional pass-through Iris-compatible scaffold
+- [`shaderpack/`](shaderpack/): optional pass-through scaffold intended for Iris;
+  runtime compatibility unverified
 - [`schemas/`](schemas/): versioned wire contracts and encoding notes
-- [`experiments/`](experiments/): scene notes, configs, ignored raw results, and
-  ignored plots
+- [`experiments/`](experiments/): scene notes, configs, ignored exploratory
+  output, and the committed 2026-07-31 audit bundle
 - [`docs/`](docs/): architecture, methods, platform setup, limits, and paper
 - [`scripts/`](scripts/): non-global bootstrap, validation, service, and benchmark
   entry points
@@ -259,8 +266,9 @@ Intel backend works.
    extraction, key mappings, HUD, timeouts, and chunk edge cases.
 2. Implement one Intel provider behind the existing adapter, then pass device
    identity, correctness, residency, timing, and failure gates on the A770.
-3. Freeze the course-study analysis plan and run enough paired seeds on recorded
-   Mac/Linux environments to populate the paper from raw artifacts.
+3. Preregister a redesigned publication-scale study with `N >> M`, growing
+   Grover powers, exact/without-replacement classical controls, and enough paired
+   seeds on recorded Mac/Linux environments.
 
 A reversible quantum ray-marching oracle and polished shader bridge are later,
 separate projects—not hidden requirements for the initial scientific result.

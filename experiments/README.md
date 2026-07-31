@@ -14,8 +14,9 @@ a valid asymptotic scaling study: `N <= 64`, most budgets satisfy `M >= N`, and
 the MLAE Grover schedule saturates. Treat it as an exploratory software matrix
 until it is redesigned. Every run writes a new timestamped CSV and JSON Lines
 pair and generates PNG/PDF plots.
-Generated results and plots are git-ignored; they are measurements from the
-machine that ran them, not repository fixtures.
+Ordinary generated results and plots are git-ignored because they are
+machine-specific measurements, not repository fixtures. The independently
+verified final audit bundle described below is the sole checked-in exception.
 
 The runner records failures and unavailable optional backends instead of
 silently substituting a CPU result. `intel_gpu` is not enabled in the checked-in
@@ -26,8 +27,9 @@ Metrics use these conventions:
 - Classical samples and visibility-table oracle calls are distinct fields.
 - Quantum oracle calls count each table circuit in `A`, `A^-1`, and every
   Grover power: `shots * sum(2*k + 1)`.
-- Circuit executions count submitted power circuits, while `shots` is the sum
-  of repetitions across them.
+- The legacy `circuit_executions` field counts distinct submitted power-circuit
+  publications/templates, while `shots` is the sum of repetitions across them;
+  audit records use `distinct_power_circuits` explicitly.
 - Process RSS is an explicitly labeled proxy, not device VRAM usage.
 - DDA table construction and exact-truth reduction are initialization/
   instrumentation work for v1 and are included in backend end-to-end time, but
@@ -36,7 +38,14 @@ Metrics use these conventions:
 The paper-grade audit runner has a separate checked-in configuration. It matches
 MC to the *realized* MLAE logical lookup calls, archives failures and hashes, and
 keeps analytical finite-shot statistics distinct from measured
-StatevectorSampler runtime.
+StatevectorSampler runtime. Its primary runtime field starts from a supplied
+table and excludes the later audit-only resource transpilation; estimator core,
+instrumentation, and full audit end-to-end remain separate.
+
+The completed paper-grade bundle is archived at
+[`audit-results/2026-07-31`](audit-results/2026-07-31/). It contains 21,504
+analytical records, 504 Qiskit/MC runtime records, 42 exact-control records, and
+no failed runs.
 
 Run it only from a clean committed worktree and choose a new empty output
 directory:

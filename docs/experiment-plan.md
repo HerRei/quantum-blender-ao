@@ -67,7 +67,7 @@ Each result records, where meaningful:
 - confidence interval and confidence level;
 - direction and qubit counts;
 - classical samples and quantum oracle calls;
-- shots and complete circuit executions;
+- shots, distinct scheduled power circuits, and sampler jobs;
 - transpiled circuit depth and gate count;
 - initialization, transfer, pure simulation, and end-to-end time;
 - process memory and estimated statevector memory;

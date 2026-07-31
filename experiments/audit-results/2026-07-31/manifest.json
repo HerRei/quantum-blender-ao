@@ -1,0 +1,411 @@
+{
+  "analytical_execution_model": "analytical measurement model: finite-shot binomial circuit outcomes; no QPU execution and no statevector simulation runtime",
+  "artifact_sha256": {
+    "analytical-raw.csv": "c68f399eae90aa9f0679148d4601ad72f3cacf354567cd585486a79c27caf8af",
+    "analytical-raw.jsonl": "07862688a67ea00fe6e0bbd9c72dafea5641130e893f0f0f6cad80be9824d8c8",
+    "analytical-summary.csv": "2d59311516f6157ee10fa8af40d62a1ae4022fe607dce97f1235fd88e1ccb868",
+    "exact-control-raw.csv": "23333bfc057399d38f7a05d0f2d6a6abca818c2fb3e08e066197b346f65ad746",
+    "exact-control-raw.jsonl": "08d1e51dcdbda2313db3e76ded073fe54724a347b1d25d089e8f6bb3982910a4",
+    "exact-control-summary.csv": "d17b5b5d535540667c44656f5b355e234a16fe9e8b057acf58d45aa4d9cc76bf",
+    "plots/bias-vs-logical-oracle-calls.pdf": "4db2aa86a9803ff09d618eeff842c9da8314cb7915578710a8bd8b7a96e1491a",
+    "plots/bias-vs-logical-oracle-calls.png": "398a5fe72f37fa61773bfa1e0f7db4cbbf53b7aee4ea3ffe55e53d8952b71bcf",
+    "plots/circuit-depth-vs-logical-oracle-calls.pdf": "9b218d918a599618afb71dbd495d7817f57642bb478d1a786fa2c6b959bc8681",
+    "plots/circuit-depth-vs-logical-oracle-calls.png": "51bbbae78617ca1b69b9ec15647e18bbd0717d5e807723db3df968bbb573dacc",
+    "plots/gate-count-vs-logical-oracle-calls.pdf": "2e0d68b0b341a4d39abf273b344ab874f29a3f6a801f0065d4ca9c47a9c3d250",
+    "plots/gate-count-vs-logical-oracle-calls.png": "23ba5ffb36d575548e996dc7b342adff6f11b10d70b559e894ede6d1175827f9",
+    "plots/rmse-vs-logical-oracle-calls.pdf": "71b41974a9f1496ed8af9e8472e9a6a6d2f08ac4af33c3fbaf7e432c85639cad",
+    "plots/rmse-vs-logical-oracle-calls.png": "438f0b0fb9ce4ec86a301d8d2acfbaf88755c9af33ba2b721c67cd7710b4a8c3",
+    "plots/runtime-vs-logical-oracle-calls.pdf": "4fd032d97a030820174ab2b71c4b7a84c5eb305f3fa84b2fc22959951b83c9bf",
+    "plots/runtime-vs-logical-oracle-calls.png": "9897b57dc349d29334e2af3ed01269adbb009e6537adccbdb0b264d0afc3e5a7",
+    "plots/std-vs-logical-oracle-calls.pdf": "46ce5d52f09a8f6a6c226e5034ef5c85f2a545b8d7ccc63ea395e61974574ef6",
+    "plots/std-vs-logical-oracle-calls.png": "cc3a8aac2b5cc6a9a752a115f36417e46e7c0281566fa44b08637f98057820ab",
+    "runtime-raw.csv": "e18f47b6fee1076f81650e946d486ce4817ad895111df74a3b071a8b9ef374b1",
+    "runtime-raw.jsonl": "7e63639338e2f3dbe22fc21b27687bac169864b53ce4a3bf213de60470bec451",
+    "runtime-summary.csv": "d88302a7d9faa364d5e0091bcaefc130c63d403680e77d9d98ed6ac2a40b47b3",
+    "scientific-audit.toml": "ff22684953855c3f679b396e9cb1dab6123d18540899a2de2dc231a75685b9fd"
+  },
+  "baseline_commit": "a4170570e76db3a9229def731a260112d68d304e",
+  "bootstrap_protocol": {
+    "base_seed": 20260801,
+    "confidence_level": 0.95,
+    "method": "deterministic nonparametric percentile bootstrap",
+    "point_metrics": [
+      "bias",
+      "rmse",
+      "sample_std",
+      "operational_method_runtime_median"
+    ],
+    "replicates": 2000,
+    "slope_resampling": "joint replicate identifiers are resampled once and reused across every preregistered budget; a slope resample is invalid if any RMSE is zero"
+  },
+  "budget_designs": [
+    {
+      "distinct_circuits": 4,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "grover_iterations": 7,
+      "inverse_state_preparation_applications": 7,
+      "logical_lookup_oracle_calls": 18,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": false,
+      "requested_budget_ge_domain_size": false,
+      "requested_oracle_budget": 32,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 1,
+      "state_preparation_applications": 11,
+      "total_shots": 4
+    },
+    {
+      "distinct_circuits": 5,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "grover_iterations": 15,
+      "inverse_state_preparation_applications": 15,
+      "logical_lookup_oracle_calls": 35,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": false,
+      "requested_budget_ge_domain_size": true,
+      "requested_oracle_budget": 64,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 1,
+      "state_preparation_applications": 20,
+      "total_shots": 5
+    },
+    {
+      "distinct_circuits": 5,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "grover_iterations": 45,
+      "inverse_state_preparation_applications": 45,
+      "logical_lookup_oracle_calls": 105,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": true,
+      "requested_budget_ge_domain_size": true,
+      "requested_oracle_budget": 128,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 3,
+      "state_preparation_applications": 60,
+      "total_shots": 15
+    },
+    {
+      "distinct_circuits": 5,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "grover_iterations": 105,
+      "inverse_state_preparation_applications": 105,
+      "logical_lookup_oracle_calls": 245,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": true,
+      "requested_budget_ge_domain_size": true,
+      "requested_oracle_budget": 256,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 7,
+      "state_preparation_applications": 140,
+      "total_shots": 35
+    },
+    {
+      "distinct_circuits": 5,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "grover_iterations": 210,
+      "inverse_state_preparation_applications": 210,
+      "logical_lookup_oracle_calls": 490,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": true,
+      "requested_budget_ge_domain_size": true,
+      "requested_oracle_budget": 512,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 14,
+      "state_preparation_applications": 280,
+      "total_shots": 70
+    },
+    {
+      "distinct_circuits": 5,
+      "evaluation_schedule": [
+        0,
+        1,
+        2,
+        4,
+        8
+      ],
+      "grover_iterations": 435,
+      "inverse_state_preparation_applications": 435,
+      "logical_lookup_oracle_calls": 1015,
+      "oracle_domain_size": 64,
+      "realized_calls_ge_domain_size": true,
+      "requested_budget_ge_domain_size": true,
+      "requested_oracle_budget": 1024,
+      "sampler_jobs": 1,
+      "shots_per_circuit": 29,
+      "state_preparation_applications": 580,
+      "total_shots": 145
+    }
+  ],
+  "bundle_kind": "scientific_audit_experiment",
+  "confidence_interval_methods": {
+    "analytical_mlae": "audit_fixed_grid_likelihood_ratio_envelope_not_qiskit_ci; envelope of all fixed amplitude-grid points passing the one-parameter LR cutoff",
+    "classical_monte_carlo": "Wilson score interval",
+    "exact_enumeration": "degenerate exact interval [a, a]"
+  },
+  "config": {
+    "amplitude_denominator": 64,
+    "amplitude_numerators": [
+      0,
+      1,
+      8,
+      32,
+      56,
+      63,
+      64
+    ],
+    "analytical_replicates": 256,
+    "base_seed": 20260731,
+    "baseline_commit": "a4170570e76db3a9229def731a260112d68d304e",
+    "bootstrap_confidence_level": 0.95,
+    "bootstrap_replicates": 2000,
+    "bootstrap_seed": 20260801,
+    "confidence_level": 0.95,
+    "desired_accuracy": 0.05,
+    "mle_grid_points": 8193,
+    "name": "scientific-audit",
+    "requested_oracle_budgets": [
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024
+    ],
+    "require_clean_worktree": true,
+    "runtime_fail_fast": false,
+    "runtime_measured_repeats": 5,
+    "runtime_order_seed": 20260802,
+    "runtime_warmup_repeats": 1,
+    "schema_version": "1.0",
+    "table_layout": "contiguous_prefix_visible_then_blocked"
+  },
+  "config_sha256": "ff22684953855c3f679b396e9cb1dab6123d18540899a2de2dc231a75685b9fd",
+  "cost_model": {
+    "circuit_depth": "maximum quantum-operation depth among separately transpiled schedule circuits; all-to-all analysis with no backend target or coupling map",
+    "classical_monte_carlo_calls": "one deterministic 64-entry table lookup per sample; exactly matched to realized logical_lookup_oracle_calls for MLAE",
+    "exact_enumeration_calls": "64 deterministic reads, one for every entry in the finite oracle domain",
+    "gate_count": "u/cx basis quantum gates only; barrier and measurement excluded; max, schedule sum, and shot-weighted schedule sum reported separately; all-to-all analysis with no backend target or coupling map",
+    "grover_iterations": "shots_per_circuit * sum(k)",
+    "logical_lookup_oracle_calls": "shots_per_circuit * sum(2*k + 1); counts executed logical U_f and U_f^-1 applications, including the leading state preparation",
+    "shots": "measurement repetitions; never used as an alias for oracle calls"
+  },
+  "created_utc": "2026-07-31T18:22:03.496034+00:00",
+  "current_head": "4387756bc0f5fcc8a7166b5c0df25a2c02187edd",
+  "current_head_dirty": false,
+  "current_head_tree": "41b040da044e7868bb8dda4802e67daca6474a92",
+  "dirty_status_entries": [],
+  "environment": {
+    "cpu_brand": "Apple M1 Pro",
+    "hardware_model": "MacBookPro18,3",
+    "logical_cpu_count": 10,
+    "machine": "arm64",
+    "packages": {
+      "matplotlib": "3.11.1",
+      "numpy": "2.5.1",
+      "psutil": "7.2.2",
+      "qiskit": "2.3.1",
+      "qiskit-algorithms": "0.4.0",
+      "quantum-minecraft-rendering": "0.1.0"
+    },
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python": "3.13.14 (main, Jul 23 2026, 14:48:16) [Clang 22.1.3 ]",
+    "release": "25.4.0",
+    "system": "Darwin",
+    "total_system_memory_bytes": 17179869184
+  },
+  "exact_enumeration_calls": 64,
+  "finite_domain_fairness": {
+    "interpretation": "Exact enumeration has zero error after N=64 logical table reads. Every QAE/MC cell records requested_budget_ge_domain_size and realized_calls_ge_domain_size; M>=N cells cannot establish an advantage over the exact finite-domain classical control.",
+    "oracle_domain_size": 64
+  },
+  "non_claims": [
+    "Analytical measurement-model runtime is not QPU or simulator runtime.",
+    "StatevectorSampler runtime is classical CPU simulation, not physical-QPU runtime.",
+    "The lookup truth table is classically specified; this is not reversible ray marching.",
+    "No practical quantum speed-up or hardware result is inferred from this bundle."
+  ],
+  "outlier_policy": {
+    "raw_archive": "every successful, failed, and warmup record is retained; captured runtime warnings remain attached to their raw records",
+    "removal_or_winsorization": "none",
+    "reported_runtime_statistics": [
+      "median",
+      "mean",
+      "min",
+      "max",
+      "sample_std"
+    ],
+    "summary_exclusions": "only records explicitly marked warmup are excluded by design; failed records without a valid metric are separately counted and never silently imputed"
+  },
+  "plot_protocol": {
+    "byte_reproducible": "PNG and PDF outputs are deterministic for identical raw/config inputs; PDF wall-clock creation/modification metadata is disabled",
+    "failure_counts_visible": true,
+    "figure_count": 6,
+    "names": [
+      "rmse-vs-logical-oracle-calls",
+      "bias-vs-logical-oracle-calls",
+      "std-vs-logical-oracle-calls",
+      "runtime-vs-logical-oracle-calls",
+      "circuit-depth-vs-logical-oracle-calls",
+      "gate-count-vs-logical-oracle-calls"
+    ],
+    "regeneration_function": "qmr.audit_experiment.regenerate_audit_plots",
+    "regeneration_inputs": [
+      "scientific-audit.toml",
+      "analytical-raw.jsonl",
+      "exact-control-raw.jsonl",
+      "runtime-raw.jsonl"
+    ],
+    "selective_curve_fits": false,
+    "slope_definition": "ordinary least squares of log(RMSE) on log(realized calls) over every preregistered budget for one method/amplitude; undefined if any full-range point is missing or nonpositive",
+    "uncertainty": "deterministic 95% percentile-bootstrap bands for bias, RMSE, sample standard deviation, and operational-method runtime median"
+  },
+  "record_counts": {
+    "analytical_failed": 0,
+    "analytical_total": 21504,
+    "exact_failed": 0,
+    "exact_total_including_warmup": 42,
+    "exact_warmup": 7,
+    "runtime_failed": 0,
+    "runtime_total_including_warmup": 504,
+    "runtime_warmup": 84,
+    "runtime_warning_records": 44,
+    "runtime_warning_total": 44
+  },
+  "runtime_execution_model": "Qiskit StatevectorSampler finite-shot CPU simulation of synthesized circuits; not a QPU",
+  "runtime_order_protocol": {
+    "method": "warmup and measured pair units are separately deterministically shuffled; adjacent MC/Qiskit order alternates, giving exact phase balance when the number of pair units is even",
+    "raw_record_fields": [
+      "runtime_execution_sequence",
+      "runtime_phase_pair_sequence",
+      "runtime_pair_id",
+      "runtime_within_pair_position",
+      "runtime_paired_method_order",
+      "runtime_order_phase_seed"
+    ],
+    "seed": 20260802
+  },
+  "runtime_warning_messages": [
+    "RuntimeWarning: divide by zero encountered in scalar divide"
+  ],
+  "schema_version": "1.0",
+  "source_bundle_sha256": "12b3ed1898e81373b1b70a5e6c22bec27899f08f0f8f1d9aa85ed5c010ad316e",
+  "source_git_blob_ids": {
+    "quantum-service/pyproject.toml": "0e53ef3aad6b17789d0f8ef830f320e19b01db0c",
+    "quantum-service/src/qmr/audit_experiment.py": "de1a32dd9962b8bb3d05d410d9eff3f62c416efc",
+    "quantum-service/src/qmr/backends/cpu_quantum.py": "b6107bf057fc1f51ee141db91b8320f66a145a88",
+    "quantum-service/src/qmr/backends/monte_carlo.py": "d97e7233fe55395e49b2d3b767a8a74e85f7f7cb",
+    "quantum-service/uv.lock": "59488d579009cc434ab0976826b494187cbdb987"
+  },
+  "source_sha256": {
+    "quantum-service/pyproject.toml": "c290ed7e7644e0e7017a1f1df1b20c33d81d02a38607f2d72f99a0e48605f35b",
+    "quantum-service/src/qmr/audit_experiment.py": "7e7999cf2909a64950583d2628e5337205b498e8c877bb28a7571f6506b0c6af",
+    "quantum-service/src/qmr/backends/cpu_quantum.py": "00100d9c913f7f840e8928f2cdf2199580381f5b3b9da1fd56000b6f633f021e",
+    "quantum-service/src/qmr/backends/monte_carlo.py": "97718f32810635275c54da8aa826df4309a72bfba32c94885734c605b2f3f72f",
+    "quantum-service/uv.lock": "5d9b3229a7a416071c8e64b7b29e39d12a6b7b643348dd514b8d2ad10b645f0f"
+  },
+  "statistical_metric_definitions": {
+    "bias": "mean_estimate minus the exact amplitude",
+    "mean_estimate": "arithmetic mean of successful replicate estimates",
+    "rmse": "square root of the mean squared error against the exact amplitude",
+    "sample_std": "square root of sample_variance",
+    "sample_variance": "unbiased replicate-estimate variance with denominator n-1"
+  },
+  "timer_definitions": {
+    "analysis_copy_transpilation_ms": "after the operational method timer, construct and optimization_level=0 transpile resource-analysis circuit copies without a backend target/coupling map",
+    "audit_end_to_end_ms": "all explicitly executed audit phases for one runtime record, including the audit-only resource-analysis transpilation; excludes raw-file serialization and manifest collection",
+    "clock": "time.perf_counter_ns monotonic wall clock",
+    "confidence_interval_postprocessing_ms": "method-specific confidence-interval call after the estimator timer; Qiskit likelihood-ratio for MLAE and Wilson score for MC",
+    "estimator_runtime_ms_exact": "Python sum over all 64 supplied table entries",
+    "estimator_runtime_ms_mc": "seeded table sampling and sample mean",
+    "estimator_runtime_ms_qiskit": "MaximumLikelihoodAmplitudeEstimation.estimate; includes primitive circuit handling, StatevectorSampler sampling, and MLE postprocessing",
+    "import_costs": "Python, Qiskit, and Matplotlib imports complete before every per-record timer and are excluded from audit_end_to_end_ms",
+    "operational_method_runtime_ms": "contiguous wall-clock runtime from a supplied table needed to return the method result: oracle synthesis, sampler/algorithm setup, estimator, and confidence interval for Qiskit; sampling plus Wilson interval for MC; summation for exact. Excludes the later audit-only analysis-copy transpilation.",
+    "oracle_synthesis_ms": "build_estimation_problem(table)",
+    "runtime_plot_metric": "median operational_method_runtime_ms with deterministic percentile-bootstrap interval; estimator core, audit-only transpilation, and full audit end-to-end remain separately archived",
+    "warmup_policy": "warmup records are retained with warmup=true and excluded from runtime summary; they exercise lazy runtime initialization after imports and do not measure imports"
+  },
+  "truth_table_hash_encoding": "SHA-256(bytes(table)); exactly one byte 0x00 or 0x01 per table index, in ascending index order",
+  "truth_tables": [
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 0,
+      "marked_count": 0,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 1,
+      "marked_count": 1,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "16abab341fb7f370e27e4dadcf81766dd0dfd0ae64469477bb2cf6614938b2af"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 8,
+      "marked_count": 8,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "407b84e032b28972b59fe5732c4e37776624a39308e563a5604359ca2b16ec23"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 32,
+      "marked_count": 32,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "037d6dfb3a369a41e01100fdd53c35ee3fb69ddec5830d61e1138d066a4c2285"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 56,
+      "marked_count": 56,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "3c2388fcb014d41bb64b30937ecf31fd7ffb7b9790d03bc63ad567d3c56e6f33"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 63,
+      "marked_count": 63,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "4a22bb45b68e2388bce472d38b49adb1bb6b08e220e9edede71b70cc62ad2db2"
+    },
+    {
+      "amplitude_denominator": 64,
+      "amplitude_numerator": 64,
+      "marked_count": 64,
+      "table_layout": "contiguous_prefix_visible_then_blocked",
+      "visibility_table_sha256": "7c8975e1e60a5c8337f28edf8c33c3b180360b7279644a9bc1af3c51e6220bf5"
+    }
+  ],
+  "worktree_clean_at_start": true,
+  "worktree_clean_required": true
+}

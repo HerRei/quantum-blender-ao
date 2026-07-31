@@ -17,7 +17,7 @@ the Qiskit Algorithms 0.4.0 implementation of Suzuki et al.'s QAE-without-QPE
 method. It was not IQAE, canonical QPE-based QAE, or a lone Bernoulli circuit.
 The circuit prepared a table-index superposition, evaluated a reversible lookup
 oracle into one objective qubit, applied non-zero Grover powers, sampled the
-objective qubit, and performed a classical global maximum-likelihood fit.
+objective qubit, and performed a classical numerical maximum-likelihood fit.
 
 The original logical oracle accounting,
 
@@ -74,6 +74,12 @@ branch:     main
 commit:     a4170570e76db3a9229def731a260112d68d304e
 remote:     origin/main at the same commit
 ```
+
+The final paper-grade measurement bundle was executed from the separate clean
+commit `4387756bc0f5fcc8a7166b5c0df25a2c02187edd` (Git tree
+`41b040da044e7868bb8dda4802e67daca6474a92`). The commit containing this report
+and the archived bundle is the final delivery commit reported in the audit
+handoff and CI; a Git commit cannot embed its own hash in its contents.
 
 Before edits, the following completed successfully on the audit host:
 
@@ -162,7 +168,8 @@ the non-adaptive exponential schedule `0,1,2,4,...`, constrained by a requested
 maximum logical lookup-call budget and heuristically capped by
 `desired_accuracy`. Every scheduled circuit receives the same number of shots.
 
-The objective-bit counts are fitted by maximizing
+The objective-bit counts are fitted by a numerical full-range brute-grid
+maximum-likelihood search over
 
 ```text
 L(theta) = product_j
@@ -207,7 +214,7 @@ audit uses the following non-interchangeable quantities.
 | Max circuit depth | maximum over separately transpiled power circuits | `u/cx` analysis depth |
 | Max gate count | maximum quantum operations over those circuits | gates, excluding barrier/measure |
 | Schedule gate count | sum over one shot of every power circuit | gates per complete schedule |
-| Shot-weighted gate count | `s * schedule gate count` | simulated/physical gate applications |
+| Shot-weighted gate count | `s * schedule gate count` | counterfactual per-shot gate-instance sum of analysis circuits |
 | Circuit runtime | measured StatevectorSampler estimator wall time | milliseconds |
 | End-to-end backend time | DDA through estimator/CI, excluding response serialization | milliseconds |
 
@@ -215,8 +222,11 @@ The top-level `oracle_calls` remains the first quantity because it provides the
 common idealized `f(i)` query abstraction for MC and MLAE. Raw metadata now
 publishes the rest. The resource circuits are analysis-only copies transpiled to
 all-to-all `u/cx`, optimization level 0. StatevectorSampler receives the
-untranspiled Qiskit circuits, so these are not hardware-specific executed-circuit
-metrics.
+untranspiled Qiskit circuits, so these are neither measured simulator operations
+nor hardware-routed physical-gate metrics. The legacy top-level field
+`circuit_executions` means the number of distinct scheduled power-circuit
+publications (`L`), not shots, hardware repetitions, or sampler jobs; the audit
+uses the unambiguous `distinct_power_circuits` name in cost records.
 
 For iid MC with replacement and `M` lookups,
 
@@ -252,8 +262,11 @@ For the checked-in `desired_accuracy=0.05` course configuration:
 
 The original implementation's formula was therefore correct under its logical
 oracle model. Qiskit's `num_oracle_queries` convention counts shot-weighted
-Grover powers (`s*sum(k)`), which is a different quantity and was already stored
-separately rather than substituted for `oracle_calls`.
+Grover powers (`s*sum(k)`), which is a different quantity. The baseline metadata
+field named `qiskit_reported_grover_queries` was actually computed locally from
+that formula rather than read from Qiskit; its numeric value was correct but its
+provenance label was false. Corrected code reads `algorithm_result.num_oracle_queries`
+and rejects a disagreement with the independently planned count.
 
 The MLE and likelihood-ratio interval reuse the same collected counts. They add
 classical postprocessing time but no circuits, shots, Grover iterations, or
@@ -264,15 +277,15 @@ For constant tables, synthesis can optimize `U_f` to no objective gate or one
 intentional for the ideal query model and must not be presented as an actual gate
 application count.
 
-For a nonconstant `N=2^n` table with `m` marked entries, the implemented builder
-classically scans all `N` bits and emits one `n`-controlled `X` minterm per
-marked index, surrounded by zero-control basis changes. Thus synthesis size is
-table-layout dependent and at least linear in `m` before MCX decomposition; the
-all-to-all `u/cx` gate/depth expansion also grows with the number of controls.
-An `A Q^k` circuit embeds `2k+1` lookup/inverse-lookup instances at the logical
-level. Maximum single-circuit depth/gates therefore grow with maximum `k` and
-oracle structure, whereas shot-weighted gates additionally grow with `s` even
-after the schedule's maximum `k` has saturated.
+For a nonconstant `N=2^n` table with `m` marked entries, the builder performs a
+classical `Theta(N)` scan. Its high-level lookup contains `m` instances of
+`MCX(n)` plus `2 * sum_{i:f(i)=1} zero_bits(i)` single-qubit `X` basis changes;
+constant tables use explicit shortcuts. An `A Q^k` circuit embeds exactly
+`2k+1` lookup/inverse-lookup instances at the logical level. The resulting
+all-to-all `u/cx` gate/depth cost is layout- and Qiskit-HLS-dependent after MCX
+decomposition and is not hardware routed. Maximum single-circuit depth/gates
+grow with maximum `k` and oracle structure, whereas the counterfactual
+shot-weighted gate sum additionally grows with `s` after `k_max` saturates.
 
 ## 6. Fairness of the Monte Carlo comparison
 
@@ -317,11 +330,12 @@ the relevant classical bound for the implemented finite table.
 
 ## 7. Reproduced pre-audit results
 
-Two local git-ignored smoke bundles were present. Each used one seed, three
-8-direction scenes, and requested budget 64. Repeating the same seed produced
-identical estimates, as expected; the two bundles are not independent statistical
-replicates.
+Two local, git-ignored, unarchived smoke bundles were present. Each used one
+seed, three 8-direction scenes, and requested budget 64. Repeating the same seed
+produced identical estimates, as expected; the two bundles are not independent
+statistical replicates.
 
+They have no committed path or manifest hash and are not remotely reproducible.
 Descriptively, and **not as paper evidence**:
 
 | Metric | Smoke bundle 1 | Smoke bundle 2 |
@@ -336,8 +350,8 @@ variance endpoints. It does not establish scaling or a query advantage. The CPU
 simulator was about `1.6e3` times slower in this tiny smoke sample, but the timing
 design is too weak for an inferential runtime claim.
 
-The baseline paper contained only explicit `[RESULT TO BE MEASURED]` markers; no
-invented or undocumented numeric result was found.
+The baseline paper contained only explicit result placeholders; no invented or
+undocumented numeric result was found.
 
 ## 8. New audit experiments
 
@@ -348,7 +362,7 @@ The checked-in audit configuration uses:
 - amplitudes `0`, `1/64`, `1/8`, `1/2`, `7/8`, `63/64`, `1`;
 - requested caps `32,64,128,256,512,1024`;
 - `desired_accuracy=0.05` and confidence level 0.95;
-- at least 256 deterministic replicates per amplitude/budget/method;
+- exactly 256 deterministic replicates per amplitude/budget/method;
 - 2,000 deterministic percentile-bootstrap resamples for bias, RMSE, sample
   standard deviation, and jointly resampled full-range slopes;
 - MC budgets equal to MLAE's realized logical lookup-call count;
@@ -356,28 +370,46 @@ The checked-in audit configuration uses:
   series whose RMSE is identically zero and therefore has no logarithm;
 - no post-hoc amplitude or budget removal.
 
-The high-replication QAE statistics draw ideal finite-shot counts from the
+The high-replication QAE statistics draw ideal-circuit finite-shot counts from the
 analytically and circuit-verified probability
 `sin^2((2*k+1)*theta)`, then maximize the same MLAE likelihood on a fixed
 8,193-point amplitude grid. Qiskit's production estimator instead uses its
 public brute minimizer on a theta grid; representative multi-power count vectors
 are regression-checked, but the two numerical searches are not labelled
-identical. Audit records are therefore **analytical noiseless finite-shot
-measurement-model results**, not executed `cpu_quantum`, QPU, or simulator
-runtimes.
+identical. Shot noise is included, but no hardware-noise model is present. Audit
+records are therefore **analytical finite-shot measurement-model results from the
+separate fixed-grid estimator**, not direct `cpu_quantum`, QPU, or simulator
+executions.
 
 Actual resource and runtime records separately construct a documented
 contiguous-prefix 64-entry gate oracle and execute Qiskit StatevectorSampler.
 Each cell has one warm-up and five measured repetitions. Warm-ups remain in raw
 data but are excluded from summaries; a seed-pinned plan balances MC-first and
 Qiskit-first pairs and stores the complete execution order. Median estimator
-kernel time and audit end-to-end time are both archived; the primary runtime plot
-uses the latter, including lookup synthesis, estimator setup, analysis-copy
-transpilation, estimator execution, and interval postprocessing.
+kernel time, operational method time, analysis-only transpilation, and audit
+end-to-end time are all archived. The primary runtime plot uses the contiguous
+operational time from an already supplied table: Qiskit lookup synthesis,
+estimator setup, estimator execution, and interval postprocessing, or MC
+sampling plus Wilson interval. Resource-analysis copies are constructed only
+after that timer and are excluded from the primary comparison.
+
+All per-record timings use monotonic `perf_counter_ns`. Python/Qiskit imports and
+process startup finish before the timers; raw-file serialization, plotting, and
+manifest construction are excluded. The complete audit end-to-end field includes
+the later resource-analysis transpilation. These supplied-table audit timers are
+not the generic production backend's DDA-to-result end-to-end time. No outlier
+was removed or winsorized. All successful, failed, warm-up, and warning-bearing
+rows remain in raw JSONL/CSV.
 
 ### 8.2 Archived raw data and plots
 
-`AUDIT_ARTIFACT_PATH_PLACEHOLDER`
+The complete committed bundle is
+[`experiments/audit-results/2026-07-31`](../experiments/audit-results/2026-07-31/).
+Its manifest binds baseline and execution commits, the clean Git tree, config,
+five relevant source/dependency files, all truth tables, every raw/summary file,
+and every plot by SHA-256. It records Python 3.13.14, Qiskit 2.3.1,
+qiskit-algorithms 0.4.0, macOS 26.4.1, `MacBookPro18,3`, Apple M1 Pro, 10 logical
+CPUs, and 16 GiB RAM.
 
 The bundle contains raw CSV and JSONL, aggregate statistics, runtime/resource
 records, the exact config, hashes, environment metadata, failures, and exactly
@@ -394,13 +426,90 @@ The first four display preregistered 95% bootstrap uncertainty where sampling
 variation exists. Every panel states failed/attempted run counts. Deterministic
 resource curves have no artificial error bars.
 
+Regenerate the six byte-identical PNG/PDF pairs from only the archived config
+and three raw JSONL files (under the same pinned source/dependency/rendering
+environment) with:
+
+```bash
+uv run --project quantum-service --frozen python -c \
+  'from pathlib import Path; from qmr.audit_experiment import regenerate_audit_plots; regenerate_audit_plots(Path("experiments/audit-results/2026-07-31"), Path("/tmp/qmr-audit-plots"))'
+```
+
 ### 8.3 Results
 
-`AUDIT_RESULTS_PLACEHOLDER`
+The analytical archive contains 21,504 successful records and no failures. The
+runtime archive contains 420 measured records plus 84 retained warm-ups and no
+failures; the exact control contains 35 measured records plus seven warm-ups and
+no failures.
+
+For the five interior amplitudes, all 256-replicate MC full-range slope
+intervals contain `-0.5`. The fixed-grid MLAE fits look numerically steeper, but
+the interpretation in section 8.4 is essential:
+
+| `a` | MC slope (95% bootstrap CI) | MLAE slope (95% bootstrap CI) | MC RMSE at `M=1015` | MLAE RMSE at `M=1015` |
+|---:|---:|---:|---:|---:|
+| `1/64` | -0.528 `[-0.562,-0.491]` | -1.262 `[-1.354,-1.182]` | 0.003848 | 0.001148 |
+| `1/8` | -0.505 `[-0.531,-0.480]` | -1.152 `[-1.237,-1.099]` | 0.010292 | 0.004832 |
+| `1/2` | -0.491 `[-0.515,-0.467]` | -1.019 `[-1.179,-0.974]` | 0.015516 | 0.004737 |
+| `7/8` | -0.517 `[-0.541,-0.493]` | -1.176 `[-1.269,-1.118]` | 0.010013 | 0.004408 |
+| `63/64` | -0.500 `[-0.525,-0.475]` | -1.191 `[-1.291,-1.112]` | 0.003929 | 0.001134 |
+
+At `a=0` and `a=1`, both methods have exactly zero bias, variance, standard
+deviation, and RMSE at every budget; their slopes are undefined. `sample_variance`
+is explicitly archived as the unbiased replicate-estimate variance. MC's maximum
+absolute observed bias over all interior cells was 0.00290. Fixed-grid MLAE was
+strongly biased and multimodal at low budgets (absolute bias up to 0.11514).
+
+MLAE had lower RMSE than matched iid MC for none of the five interior amplitudes
+through `M=245`, four of five at `M=490`, and all five at `M=1015`. Its nominal
+95% likelihood-ratio hull was badly under-calibrated at low shot counts: for
+`a=1/2`, empirical coverage was 44.5%, 50.0%, and 71.5% at `M=18,35,105`.
+Wilson coverage was also discrete near the boundaries but its exact `a=0/1`
+endpoints now cover truth for every budget.
+
+On the audit host, the median raw operational method times were 2,147.08 ms for
+Qiskit MLAE, 0.0591 ms for MC, and 0.00025 ms for the 64-entry exact Python sum.
+Across 210 directly paired Qiskit/MC measurements, the Qiskit/MC operational
+ratio had median `4.38e4` (range `3.13e3` to `6.42e5`). These local five-repeat
+timings are descriptive. Exact's sub-microsecond value is particularly timer-
+sensitive and must not be generalized.
+
+For Qiskit rows, raw global medians were 1.164 ms lookup synthesis, 0.0056 ms
+setup, 2,045.74 ms estimator execution, 100.47 ms LR postprocessing, 275.15 ms
+later analysis-copy transpilation, and 2,425.85 ms complete audit end-to-end.
+Forty-four successful Qiskit records (eight warm-ups) captured Qiskit's known
+`divide by zero` Fisher-information diagnostic when its MLE landed exactly on a
+boundary; these warnings caused no extra circuit, shot, or failure and are not
+suppressed in the archive.
+
+The maximum all-to-all `u/cx` analysis depth ranged from 860 to 227,715 and the
+maximum one-circuit gate count from 1,382 to 346,651. Once the schedule reaches
+`[0,1,2,4,8]`, both remain constant with increasing shots; the counterfactual
+shot-weighted schedule sum grows up to 20,682,945 gates for the measured
+`63/64` contiguous-prefix table. At realized `M=35`, the `63/64` table has
+42.8 times the depth of the `1/64` table, illustrating that ideal query cost is
+nearly amplitude-symmetric while this minterm synthesis is not. Only one table
+layout was tested, so no causal layout comparison is claimed.
+
+Exact enumeration returns zero error after 64 deterministic reads for all seven
+tables. It therefore dominates both estimators on the implemented finite domain
+for every realized budget `M>=64`.
 
 ### 8.4 Scaling conclusion
 
-`AUDIT_SCALING_CONCLUSION_PLACEHOLDER`
+The MC experiment **does reproduce** the expected `M^-1/2` scaling. The MLAE
+full-range regression superficially produces slopes near or steeper than `-1`,
+but it **does not demonstrate asymptotic `1/M` QAE scaling**. Its curves are
+nonmonotone, and the fitted decline is dominated by abrupt resolution of
+likelihood aliases between `M=245` and `M=490`. Above `M=35` the maximum Grover
+power is fixed at eight and only shots grow; the regular asymptotic regime of
+that fixed-depth design is `M^-1/2`.
+
+Thus a finite-budget constant-factor advantage over iid-with-replacement MC is
+visible only at the two largest budgets, but the expected query advantage is not
+reproduced as a defensible scaling law and is irrelevant to this concrete
+64-entry problem because exact enumeration already has zero error at `M=64`.
+No practical or hardware quantum speed-up follows.
 
 ## 9. Errors found
 
@@ -418,8 +527,9 @@ marked as corrected-code references.
 - **Correction:** the audit reports the exact `N`-query bound and labels MC as an
   iid-with-replacement baseline. The publication-scale redesign remains open:
   use `N >> M` or add exact/cached/without-replacement controls.
-- **Regression:** the audit summary records `domain_size`, `M`, and whether
-  `M>=N` for every cell; the report refuses a speed-up conclusion in those cells.
+- **Regression:** `test_checked_in_audit_config_matches_preregistered_protocol`
+  and `test_exact_control_has_zero_error_64_reads_and_marked_warmup`; every
+  summary cell also records `domain_size`, `M`, and whether `M>=N`.
 
 ### SA-02 — Critical — pre-audit RMSE plot pooled the wrong estimand
 
@@ -434,8 +544,9 @@ marked as corrected-code references.
   budget, with `n`, failures, raw records, and seed-pinned 95% percentile-
   bootstrap intervals. Full-range slopes are jointly resampled across all six
   budgets.
-- **Regression:** synthetic aggregation fixtures have analytically known signed
-  errors, grouping, RMSE, bias, and standard deviation.
+- **Regression:** `test_aggregation_computes_bias_rmse_sample_std_and_full_range_slope`
+  uses analytically known signed errors, grouping, variance, RMSE, bias, and
+  standard deviation.
 
 ### SA-03 — Major — fixed accuracy cap prevents an asymptotic QAE test
 
@@ -446,9 +557,9 @@ marked as corrected-code references.
   measurement experiment and cannot demonstrate ideal `1/M` QAE scaling.
 - **Correction:** metadata now states the non-adaptive role of desired accuracy,
   unused budget, schedule, and absence of stopping. No new QAE variant was added.
-- **Regression:** budget tests verify schedules, monotone realized cost, and every
-  separate cost component. A future scaling config must contain multiple growing
-  maximum Grover powers.
+- **Regression:** `test_quantum_budget_is_monotone_and_never_exceeds_limit` and
+  `test_quantum_budget_cost_components_are_not_interchangeable`. A future
+  scaling config must contain multiple growing maximum Grover powers.
 
 ### SA-04 — Major — ground truth and table build contaminated timings
 
@@ -460,10 +571,13 @@ marked as corrected-code references.
   conflated DDA, instrumentation, synthesis, transpilation, sampling, and MLE.
 - **Correction:** current backends expose phase timings and explicitly state that
   truth/table construction is included. The audit experiment starts from a
-  fixed table and separates statistical measurement from runtime resources.
-  Central one-time table orchestration remains a required runner redesign.
-- **Regression:** phase-timing and classical-ray/read metadata are asserted for
-  small cases; the audit manifest separates the timing scopes.
+  fixed table and separates statistical measurement from runtime resources. Its
+  primary operational timer excludes audit-only resource transpilation, which
+  is executed only after the estimator/CI timer to avoid warming it; both that
+  instrumentation and full audit E2E remain archived. Central one-time table
+  orchestration remains a required runner redesign.
+- **Regression:** `test_qiskit_runtime_archives_boundary_warning_and_separates_audit_instrumentation`
+  and backend phase-metadata assertions; the manifest defines every timer scope.
 
 ### SA-05 — Major — configured confidence level was not executed and CSV hid it
 
@@ -477,8 +591,8 @@ marked as corrected-code references.
 - **Correction:** confidence is passed into every request; fields are now
   `requested_confidence_level` and
   `result_confidence_interval_{low,high,level,method}`.
-- **Regression:** an 0.80 benchmark test validates JSONL, CSV, and the actual
-  interval level.
+- **Regression:** `test_benchmark_propagates_and_exports_requested_confidence_level`
+  validates JSONL, CSV, and the actual interval level at 0.80.
 
 ### SA-06 — Major — circuit resource fields had ambiguous semantics
 
@@ -486,13 +600,19 @@ marked as corrected-code references.
 - **Problem:** `gate_count` included measurement/barrier operations and, like
   depth, was the maximum of separately transpiled analysis circuits rather than
   total work over the schedule/shots. Those circuits were not passed to the
-  sampler.
+  sampler. The legacy `circuit_executions` field meant distinct power-circuit
+  publications, not shots, and `qiskit_reported_grover_queries` was locally
+  calculated rather than obtained from Qiskit.
 - **Impact:** gate/depth plots could be interpreted as executed hardware totals.
 - **Correction:** measure/barrier are excluded; max, per-circuit, schedule-total,
-  and shot-weighted gates are separate; transpilation basis, optimization, and
-  analysis-only scope are explicit.
-- **Regression:** small-circuit tests recompute the counts and verify all field
-  identities.
+  and counterfactual shot-weighted gates are separate; transpilation basis,
+  optimization, no-target/all-to-all scope, and analysis-only status are
+  explicit. Corrected code reads Qiskit's actual Grover-query result and checks
+  it against the independent schedule. The legacy execution field is retained
+  but explicitly defined; unambiguous metadata is primary.
+- **Regression:** `test_quantum_budget_cost_components_are_not_interchangeable`
+  and `test_cpu_quantum_handles_nonconstant_oracle_reproducibly` verify the
+  cost/resource identities and the Qiskit count agreement.
 
 ### SA-07 — Major — `peak_memory_bytes` was current RSS, not peak memory
 
@@ -503,7 +623,8 @@ marked as corrected-code references.
 - **Correction:** `peak_memory_bytes` is retained as nullable compatibility data
   but no longer populated with RSS. `process_rss_bytes` stores the actual sampled
   metric. The misleading plot is not accepted as evidence.
-- **Regression:** backend tests require non-null RSS and null peak.
+- **Regression:** `test_exact_open_and_closed_baselines` requires non-null RSS
+  and null peak.
 
 ### SA-08 — Major — original statistical design was underpowered and endpoint-heavy
 
@@ -512,10 +633,10 @@ marked as corrected-code references.
   `a=1`; difficult `1/64`, `7/8`, and `63/64` cases were absent.
 - **Impact:** pooled RMSE variance was underestimated and bias/coverage could not
   be assessed reliably.
-- **Correction:** the audit grid fixes seven stated amplitudes and at least 256
+- **Correction:** the audit grid fixes seven stated amplitudes and exactly 256
   replicates. The course-study config is not rebranded as paper-valid.
-- **Regression:** config validation and audit tests assert the exact amplitude,
-  budget, and replicate grid.
+- **Regression:** `test_checked_in_audit_config_matches_preregistered_protocol`
+  and the exhaustive preregistration mutation test assert the exact grid.
 
 ### SA-09 — Major — timing order and warm-up controls were not implemented
 
@@ -528,8 +649,8 @@ marked as corrected-code references.
   summaries, uses five measured repetitions per cell, and balances a deterministic
   MC/Qiskit pair order within warm-up and measured phases. General runner
   randomization/rotation remains open.
-- **Regression:** audit raw rows carry phase/status/order fields; tests verify
-  phase balance, deterministic plans, and warm-up exclusion.
+- **Regression:** `test_runtime_order_is_deterministic_and_balanced_per_phase`
+  and `test_runtime_records_archive_the_actual_balanced_execution_order`.
 
 ### SA-10 — Major — existing tests did not prove QAE semantics
 
@@ -552,9 +673,12 @@ marked as corrected-code references.
 - **Impact:** users could interpret the configured level as exact finite-sample
   coverage or compare it directly with Wilson coverage.
 - **Correction:** method name, warning, and metadata now state the precise
-  semantics. Audit raw data records empirical coverage.
-- **Regression:** level propagation, ordering, bounds, and endpoint/intermediate
-  cases are tested; no exact-coverage claim is made.
+  semantics. Audit raw data records empirical coverage; the final grid observed
+  coverage as low as 44.5% for `a=1/2,M=18`.
+- **Regression:** `test_cpu_quantum_estimates_known_intermediate_amplitude`,
+  `test_cpu_quantum_uses_finite_shots_without_statevector_read`, and audit
+  aggregation/coverage tests check level propagation, ordering, and bounds; no
+  exact-coverage claim is made.
 
 ### SA-12 — Moderate — raw benchmark identity was insufficient for publication
 
@@ -564,11 +688,13 @@ marked as corrected-code references.
 - **Impact:** a plot could not be tied unambiguously to source and input state.
 - **Correction:** the long runner refuses a dirty worktree before writing output.
   Its manifest binds the commit and Git tree, relevant source file SHA-256/Git
-  blobs, exact config, per-table SHA-256, raw/summaries/plots, environment, and
-  status/failures. The generic runner still needs checkpointing and a formal
-  bundle manifest before a course publication run.
-- **Regression:** clean-tree rejection, source/table/artifact hashes, strict
-  preregistration, and plot regeneration are tested.
+  blobs (including the dependency lock), exact config, per-table SHA-256,
+  raw/summaries/plots, host identity, status/failures, and captured warnings. The
+  generic runner still needs checkpointing and a formal bundle manifest before
+  a course publication run.
+- **Regression:** `test_clean_worktree_guard_runs_before_long_run_writes_output`,
+  `test_raw_archive_and_manifest_preserve_required_semantics`, strict config
+  tests, and byte-identical two-pass plot regeneration.
 
 ### SA-13 — Moderate — zero-truth relative error contradicted documentation
 
@@ -591,8 +717,8 @@ marked as corrected-code references.
 - **Correction:** the full X/Z chunk footprint is checked through
   `ClientChunkCache.hasChunk` before extraction; a missing chunk skips the request
   and preserves last-good data.
-- **Regression:** footprint tests cover boundaries, negative coordinates, missing
-  chunks, and invalid radii.
+- **Regression:** `ChunkFootprintTest` covers boundaries, negative coordinates,
+  missing chunks, and invalid radii.
 
 ### SA-15 — Moderate — stale world results and HTTP lifecycle were not cleared
 
@@ -604,8 +730,8 @@ marked as corrected-code references.
 - **Correction:** level changes reset cache/smoothing and invalidate old request
   IDs; client stopping resets and closes only the owned transport. The external
   Python service is not stopped.
-- **Regression:** late completion after reset, cache/smoother reset, close
-  delegation, and real default-transport close are tested.
+- **Regression:** `LightingControllerTest.ignoresLateCompletionAfterCacheReset`,
+  cache/smoother reset tests, and both close tests in `LightingServiceClientTest`.
 
 ### SA-16 — Moderate — Fabric response acceptance was too weak
 
@@ -617,10 +743,11 @@ marked as corrected-code references.
 - **Impact:** invalid service data could reach HUD/cache as valid.
 - **Correction:** canonical response/interval validation and defensive collection
   copies were added.
-- **Regression:** schema, finiteness, ranges, required values, defensive copies,
-  and invalid wire responses are tested.
+- **Regression:** `LightingResultValidationTest`,
+  `LightingServiceClientTest.rejectsSemanticallyInvalidResult`, and the complete
+  Gson response test.
 
-### SA-17 — Moderate risk — extraction and JSON preparation remain on the client tick
+### SA-17 — Moderate — extraction and JSON preparation remain on the client tick
 
 - **Affected:** `QuantumRenderingClient.java:100-142`,
   `SceneExtractor.java:19-39`, `LightingServiceClient.java:29-33`.
@@ -631,8 +758,8 @@ marked as corrected-code references.
 - **Correction:** none without in-game profiling. Socket I/O is already
   non-blocking and timed. Documentation now avoids claiming the whole request is
   launched on a worker executor.
-- **Regression:** static review only; requires an in-game profiler and chunk-
-  streaming scenarios.
+- **Regression:** no automated regression can validate tick/frame cost; this is
+  explicitly open for an in-game profiler and chunk-streaming scenarios.
 
 ### SA-18 — Minor — remaining Fabric integration risks
 
@@ -645,7 +772,8 @@ marked as corrected-code references.
   incompatibility remains possible.
 - **Correction:** Fabric API is constrained to `>=0.155.2`. HUD/key changes are
   deferred until an actual session validates behavior.
-- **Regression:** Gradle compile/build only for registrations; in-game test open.
+- **Regression:** Gradle compile/build only for registrations; no automated
+  runtime regression exists and the in-game test remains open.
 
 ### SA-19 — Informational — the quantum oracle begins with complete classical work
 
@@ -657,7 +785,8 @@ marked as corrected-code references.
   and large, table-dependent depth/gate cost. Oracle synthesis occurs on every
   backend invocation and is included in backend end-to-end time.
 - **Correction:** no feature change; costs and limitations are now explicit.
-- **Regression:** small basis mappings and transpiled resources are measured.
+- **Regression:** `test_visibility_lookup_oracle_maps_every_basis_state` and
+  `test_cpu_quantum_handles_nonconstant_oracle_reproducibly`.
   Audit circuit-resource rows identify the contiguous-prefix table layout and
   bind every table's one-byte-per-bit encoding by SHA-256; they are not
   generalized to other truth-table layouts.
@@ -674,8 +803,7 @@ marked as corrected-code references.
   but runtime and accuracy do not predict a real QPU.
 - **Correction:** no false hardware claim is made; simulator and interval scope
   are explicit. Direct statevector probabilities remain test/debug truth only.
-- **Regression:** a fake estimator proves the result follows estimator output,
-  not the exact table truth.
+- **Regression:** `test_cpu_quantum_returns_estimator_output_not_exact_truth`.
 
 ### SA-21 — Moderate — Python, JSON Schema, and Java result contracts drifted
 
@@ -689,8 +817,10 @@ marked as corrected-code references.
 - **Correction:** the wire schema requires metadata and nonblank semantic names;
   Java now models and validates nullable nonnegative process RSS. Python applies
   the same string rules.
-- **Regression:** schema/Pydantic negative cases and a complete Gson service-
-  response fixture cover the same payload.
+- **Regression:** `test_result_schema_requires_metadata`,
+  `test_result_contract_rejects_blank_identifiers`,
+  `LightingResultValidationTest`, and
+  `SerializationTest.resultDeserializesCompleteServiceResponseContract`.
 
 ### SA-22 — Major — paper draft described intended rather than executed methods
 
@@ -706,6 +836,25 @@ marked as corrected-code references.
   RSS/phase fields, the six audit figures, and balanced audit timing order.
 - **Regression:** documentation red-team review plus placeholder scanning before
   the final commit; numerical prose is admitted only from the hashed bundle.
+
+### SA-23 — Moderate — Wilson endpoints were perturbed by floating-point cancellation
+
+- **Affected:** baseline `quantum-service/src/qmr/backends/monte_carlo.py:15-29`;
+  the first audit-run implementation duplicated the same formula.
+- **Problem:** for an all-failure sample, the mathematically exact Wilson lower
+  endpoint could evaluate to `3.47e-18`; for an all-success sample, the upper
+  endpoint could evaluate to `0.9999999999999999`. A literal coverage test then
+  falsely excluded `a=0` or `a=1`.
+- **Impact:** estimates, bias, variance, standard deviation, and RMSE were
+  unaffected, but two endpoint coverage cells in the discarded first audit run
+  were falsely zero.
+- **Correction:** exact degenerate endpoints are explicitly clamped to zero/one,
+  invalid success counts are rejected, and the audit imports the single
+  production Wilson implementation. The final bundle has endpoint coverage one
+  for every MC budget.
+- **Regression:** `test_wilson_interval_contains_exact_bernoulli_boundaries`,
+  `test_wilson_interval_rejects_invalid_counts`, and
+  `test_analytical_mc_interval_covers_exact_boundaries`.
 
 ## 10. Corrections made
 
@@ -729,13 +878,38 @@ marked as corrected-code references.
   validation, and Fabric API version constraint.
 - Added a reproducible, hashed audit experiment pipeline and reduced audit plots
   to the six required scientific views.
+- Added explicit sample variance and separated supplied-table operational method
+  time from estimator core, audit-only transpilation, and full audit end-to-end.
+- Moved resource-analysis transpilation after operational timing and archived all
+  runtime warnings without converting warnings into failures.
 - Added bootstrap uncertainty, jointly resampled slope intervals, visible failure
   counts, strict preregistration, balanced runtime order, and five timed
   repetitions per cell.
 - Required a clean benchmark commit and bound source, config, truth tables, raw
-  data, summaries, and plots by hashes.
+  data, summaries, and plots by hashes; host identity and the dependency lock are
+  included, and PNG/PDF regeneration is byte deterministic.
 - Aligned Python/Schema/Java result contracts and corrected the paper's executed-
   method description.
+- Corrected Wilson's exact zero/one endpoints and rejected invalid binomial
+  counts.
+
+Final revalidation on the audit host:
+
+- `uv sync --project quantum-service --python 3.13 --extra dev --frozen`: passed;
+- configured Ruff lint: passed;
+- strict MyPy over 21 source files: passed;
+- full Pytest suite: 104 passed, with one external Starlette deprecation warning;
+- `./gradlew clean build --no-daemon`: passed; 32 Java tests, zero failures,
+  errors, or skips;
+- JSON syntax, shell syntax, and shader-scaffold checks: passed;
+- final audit bundle: 21,504 analytical, 420 measured plus 84 warm-up runtime,
+  and 35 measured plus seven warm-up exact records; zero failed runs;
+- independent reconstruction: 22/22 artifact hashes, all source/config/table
+  hashes, all summary rows, and all 12 byte-regenerated plots matched.
+
+An additional non-gating `ruff format --check` reported 13 pre-existing
+format-only differences; repository CI does not run this formatter gate, and the
+audit did not churn unrelated files merely to normalize style.
 
 No new QAE variant, reversible quantum ray marcher, Intel backend, or shader
 feature was implemented.
@@ -766,6 +940,9 @@ feature was implemented.
     descriptive comparison, not a portable performance characterization.
 12. The direction family is small and synthetic and is not production ambient
     lighting.
+13. Forty-four successful Qiskit runtime records emitted a captured boundary
+    Fisher-information warning. The published LR hull remained finite, but the
+    diagnostic reinforces that boundary asymptotics are non-regular.
 
 ## 12. Fabric risks
 

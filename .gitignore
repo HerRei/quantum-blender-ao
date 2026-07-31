@@ -30,3 +30,5 @@ experiments/results/*
 experiments/plots/*
 !experiments/plots/.gitkeep
 experiments/audit-results/*
+!experiments/audit-results/2026-07-31/
+!experiments/audit-results/2026-07-31/**
