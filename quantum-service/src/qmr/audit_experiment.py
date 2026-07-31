@@ -1580,7 +1580,9 @@ def _save_figure(fig: Any, output_dir: Path, name: str) -> tuple[Path, Path]:
     pdf = output_dir / f"{name}.pdf"
     fig.tight_layout()
     fig.savefig(png, dpi=180)
-    fig.savefig(pdf)
+    # Matplotlib otherwise injects the wall-clock creation date into PDFs,
+    # preventing byte-for-byte regeneration from identical archived raw data.
+    fig.savefig(pdf, metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
     return png, pdf
 
@@ -2272,6 +2274,10 @@ def build_bundle_manifest(
             "figure_count": len(PLOT_NAMES),
             "names": list(PLOT_NAMES),
             "regeneration_function": "qmr.audit_experiment.regenerate_audit_plots",
+            "byte_reproducible": (
+                "PNG and PDF outputs are deterministic for identical raw/config inputs; PDF "
+                "wall-clock creation/modification metadata is disabled"
+            ),
             "regeneration_inputs": [
                 "scientific-audit.toml",
                 "analytical-raw.jsonl",

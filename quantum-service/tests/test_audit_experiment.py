@@ -552,11 +552,16 @@ def test_plots_can_be_regenerated_from_archived_config_and_three_raw_jsonl_files
     )
 
     regenerated = regenerate_audit_plots(bundle_dir, tmp_path / "regenerated")
+    repeated = regenerate_audit_plots(bundle_dir, tmp_path / "regenerated-again")
 
     assert {path.name for path in regenerated} == {
         f"{name}.{suffix}" for name in PLOT_NAMES for suffix in ("png", "pdf")
     }
     assert all(path.is_file() for path in regenerated)
+    repeated_by_name = {path.name: path for path in repeated}
+    assert all(
+        path.read_bytes() == repeated_by_name[path.name].read_bytes() for path in regenerated
+    )
 
 
 def test_raw_archive_and_manifest_preserve_required_semantics(tmp_path: Path) -> None:
