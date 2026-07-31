@@ -5,7 +5,7 @@ Carlo sampling, and simulated quantum amplitude estimation on the same small
 voxel scenes. Minecraft is an optional interactive scene source and debug
 visualizer; the scientific core runs independently.
 
-> **Status (2026-07-31): scientific backends implemented; service and mod in progress.** No Minecraft client, target
+> **Status (2026-07-31): scientific core, service, and Fabric client implemented.** No Minecraft client, target
 > GPU, Intel GPU backend, or shader integration has been run or validated.
 > Results must be measured; the repository contains no performance claims.
 
@@ -54,6 +54,11 @@ CSV/JSONL and produces PNG/PDF plots from measured records only.
 The local FastAPI service exposes `GET /health`, `GET /capabilities`,
 `POST /lighting/estimate`, and `POST /benchmark/run`. CPU-heavy calls execute
 off the event-loop thread with configurable concurrency and timeout limits.
+
+The Fabric 26.1.2 client compiles on this Mac and has unit-tested wire models,
+voxel extraction, asynchronous HTTP handling, timeout/error behavior, last-good
+result caching, key controls, and a debug HUD. The client itself has not been
+launched because Minecraft is not installed.
 
 ## Synthetic benchmark
 

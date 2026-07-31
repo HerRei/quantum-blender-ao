@@ -1,0 +1,6 @@
+{
+  "key.category.quantum-minecraft-rendering.controls": "Quantum Rendering",
+  "key.quantum-minecraft-rendering.toggle": "Toggle quantum lighting prototype",
+  "key.quantum-minecraft-rendering.cycle_algorithm": "Cycle lighting estimator"
+}
+

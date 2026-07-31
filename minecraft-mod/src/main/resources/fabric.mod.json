@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "quantum-minecraft-rendering",
+  "version": "${version}",
+  "name": "Quantum Minecraft Rendering",
+  "description": "Research client for ambient-visibility estimators backed by a local service.",
+  "authors": ["Hermes Reisner"],
+  "contact": {
+    "sources": "https://github.com/HerRei/quantum-minecraft-rendering"
+  },
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ch.unibas.qmr.client.QuantumRenderingClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.1.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
+
