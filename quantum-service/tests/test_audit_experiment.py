@@ -178,7 +178,7 @@ def test_analytical_records_are_deterministic_and_mc_matches_realized_qae_calls(
         mc = next(record for record in records if record["method"] == "classical_monte_carlo")
         assert qae["logical_lookup_oracle_calls"] == mc["logical_lookup_oracle_calls"]
         assert mc["classical_samples"] == qae["logical_lookup_oracle_calls"]
-        assert len(qae["per_circuit_good_counts"]) == len(qae["evaluation_schedule"])
+        assert len(qae["per_circuit_good_counts"]) == len(qae["evaluation_schedule"])  # type: ignore
         assert qae["analysis_model"] == ANALYTICAL_MODEL
         assert "statevector" in str(qae["analysis_model"])
         expected_table = contiguous_prefix_visibility_table(8)
@@ -189,9 +189,9 @@ def test_analytical_records_are_deterministic_and_mc_matches_realized_qae_calls(
         assert qae["confidence_interval_method"] == (
             "audit_fixed_grid_likelihood_ratio_envelope_not_qiskit_ci"
         )
-        assert qae["requested_budget_ge_domain_size"] == (int(qae["requested_oracle_budget"]) >= 64)
+        assert qae["requested_budget_ge_domain_size"] == (int(qae["requested_oracle_budget"]) >= 64)  # type: ignore
         assert qae["realized_calls_ge_domain_size"] == (
-            int(qae["logical_lookup_oracle_calls"]) >= 64
+            int(qae["logical_lookup_oracle_calls"]) >= 64  # type: ignore
         )
         assert qae["status"] == mc["status"] == "ok"
 

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from qmr.api import create_app
 from qmr.backends.mock import MockBackend
 from qmr.config import BackendSettings, ServiceSettings
-from qmr.models import LightingRequest, LightingResult
+from qmr.models import Algorithm, LightingRequest, LightingResult
 from qmr.scenes import open_sky
 
 
@@ -44,7 +44,7 @@ def test_health_capabilities_and_exact_estimate(tmp_path: Path) -> None:
 
 
 def test_configured_backend_overrides_request_with_warning(tmp_path: Path) -> None:
-    settings = _settings(tmp_path, backend=BackendSettings(name="mock"))
+    settings = _settings(tmp_path, backend=BackendSettings(name=Algorithm.MOCK))
     with TestClient(create_app(settings)) as client:
         response = client.post(
             "/lighting/estimate",
