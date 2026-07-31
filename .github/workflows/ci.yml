@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned uv frontend
+        run: python -m pip install uv==0.12.0
+
+      - name: Sync locked dependencies
+        run: uv sync --project quantum-service --python 3.13 --extra dev --frozen
+
+      - name: Lint
+        run: uv run --project quantum-service --frozen ruff check quantum-service/src quantum-service/tests
+
+      - name: Type check
+        run: uv run --project quantum-service --frozen mypy quantum-service/src
+
+      - name: Test service, schemas, algorithms, and benchmark pipeline
+        run: uv run --project quantum-service --frozen pytest quantum-service/tests
+
+  fabric:
+    name: Fabric build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5.6.0
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+          cache-dependency-path: |
+            minecraft-mod/*.gradle
+            minecraft-mod/gradle.properties
+            minecraft-mod/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Build and run Java tests (no Minecraft GUI)
+        working-directory: minecraft-mod
+        run: ./gradlew build --no-daemon
+
+  static-contracts:
+    name: Schemas, scripts, and shader scaffold
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Validate JSON syntax
+        run: |
+          python3 -m json.tool schemas/lighting-request.schema.json >/dev/null
+          python3 -m json.tool schemas/lighting-result.schema.json >/dev/null
+
+      - name: Validate shell syntax
+        run: bash -n scripts/*.sh
+
+      - name: Check shader scaffold
+        run: ./scripts/check-shaders.sh

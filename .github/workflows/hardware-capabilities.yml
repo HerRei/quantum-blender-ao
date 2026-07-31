@@ -1,0 +1,31 @@
+name: Hardware capabilities (manual, self-hosted)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-report:
+    name: Non-mutating GPU capability report
+    runs-on: [self-hosted, Linux, qmr-gpu]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.0
+
+      - name: Inspect tools and DRM devices
+        run: ./scripts/check-environment.sh
+        continue-on-error: true
+
+      - name: Enumerate PCI display devices
+        run: lspci -Dnnk | grep -A 3 -E 'VGA|3D|Display'
+
+      - name: Enumerate Vulkan devices
+        run: vulkaninfo --summary
+
+      - name: Enumerate OpenCL devices
+        run: clinfo
+
+      - name: Enumerate SYCL devices
+        run: sycl-ls
