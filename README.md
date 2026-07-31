@@ -48,7 +48,21 @@ Implemented so far: versioned JSON schemas, bit-packed voxel payloads, stable
 coordinate/index conventions, deterministic hemisphere directions, eight
 synthetic scenes, a classical 3D-DDA visibility-table builder, exact and seeded
 Monte Carlo baselines, finite-shot CPU quantum amplitude estimation, and an
-explicitly unavailable Intel GPU adapter boundary.
+explicitly unavailable Intel GPU adapter boundary. The benchmark runner exports
+CSV/JSONL and produces PNG/PDF plots from measured records only.
+
+## Synthetic benchmark
+
+```bash
+cd quantum-service
+uv sync --python 3.13 --extra dev
+uv run qmr benchmark \
+  --config ../experiments/configs/smoke.toml \
+  --output-dir ../experiments/results
+```
+
+Generated measurements and plots are ignored by Git. Do not compare simulator
+wall-clock time with hardware QPU complexity as if it demonstrated speed-up.
 
 ## License
 

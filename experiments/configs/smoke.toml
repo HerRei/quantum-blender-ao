@@ -1,0 +1,12 @@
+schema_version = "1.0"
+name = "macos-smoke"
+scenes = ["open_sky", "single_wall", "narrow_opening"]
+backends = ["exact", "classical_monte_carlo", "cpu_quantum"]
+direction_counts = [8]
+oracle_budgets = [64]
+seeds = [7]
+desired_accuracy = 0.2
+confidence_level = 0.95
+generate_plots = true
+fail_fast = true
+

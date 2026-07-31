@@ -29,6 +29,7 @@ dev = [
   "pytest>=8.4,<10",
   "pytest-cov>=6.2,<8",
   "ruff>=0.12,<1",
+  "types-pyyaml>=6,<7",
   "types-psutil>=7,<8",
 ]
 
@@ -50,6 +51,6 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = true
 packages = ["qmr"]
