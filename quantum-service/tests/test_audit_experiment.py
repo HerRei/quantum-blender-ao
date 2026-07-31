@@ -614,6 +614,8 @@ def test_raw_archive_and_manifest_preserve_required_semantics(tmp_path: Path) ->
     assert manifest["config_sha256"] == manifest["artifact_sha256"][config_copy.name]
     assert manifest["artifact_sha256"][jsonl_path.name]
     assert manifest["analytical_execution_model"] == ANALYTICAL_MODEL
+    assert "hardware_model" in manifest["environment"]
+    assert "cpu_brand" in manifest["environment"]
     assert "logical_lookup_oracle_calls" in manifest["cost_model"]
     assert manifest["exact_enumeration_calls"] == 64
     assert manifest["budget_designs"][0]["requested_budget_ge_domain_size"] is False

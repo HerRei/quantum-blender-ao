@@ -1989,6 +1989,23 @@ def _installed_version(distribution: str) -> str | None:
         return None
 
 
+def _optional_system_identifier(*command: str) -> str | None:
+    """Read a host identifier without making bundle generation platform-specific."""
+
+    try:
+        completed = subprocess.run(
+            list(command),
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    value = completed.stdout.strip()
+    return value or None
+
+
 def build_bundle_manifest(
     *,
     config: AuditExperimentConfig,
@@ -2043,6 +2060,15 @@ def build_bundle_manifest(
         }
         for numerator in config.amplitude_numerators
     ]
+    system_name = platform.system()
+    hardware_model = (
+        _optional_system_identifier("sysctl", "-n", "hw.model") if system_name == "Darwin" else None
+    )
+    cpu_brand = (
+        _optional_system_identifier("sysctl", "-n", "machdep.cpu.brand_string")
+        if system_name == "Darwin"
+        else (platform.processor() or None)
+    )
     return {
         "schema_version": "1.0",
         "bundle_kind": "scientific_audit_experiment",
@@ -2066,10 +2092,13 @@ def build_bundle_manifest(
         ),
         "truth_tables": truth_tables,
         "environment": {
-            "system": platform.system(),
+            "system": system_name,
             "release": platform.release(),
+            "platform": platform.platform(),
             "machine": platform.machine(),
             "processor": platform.processor() or "unknown",
+            "hardware_model": hardware_model,
+            "cpu_brand": cpu_brand,
             "logical_cpu_count": os.cpu_count(),
             "total_system_memory_bytes": psutil.virtual_memory().total,
             "python": sys.version,
