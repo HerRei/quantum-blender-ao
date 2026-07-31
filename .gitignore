@@ -1,0 +1,32 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# Gradle / Java
+.gradle/
+**/build/
+run/
+*.class
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime configuration and generated research data
+quantum-service/config.local.toml
+minecraft-mod/run/
+experiments/results/*
+!experiments/results/.gitkeep
+experiments/plots/*
+!experiments/plots/.gitkeep
+
