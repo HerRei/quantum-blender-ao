@@ -4,6 +4,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 blender_executable="${BLENDER_BIN:-}"
 
+if [[ "${CONDA_DEFAULT_ENV:-}" != "quantum-blender-ao" ]]; then
+  echo "Activate the project environment first: conda activate quantum-blender-ao" >&2
+  exit 1
+fi
+
 if [[ -z "$blender_executable" ]] && command -v blender >/dev/null 2>&1; then
   blender_executable="$(command -v blender)"
 fi
@@ -26,7 +31,7 @@ mkdir -p "$repo_root/scenes" "$repo_root/generated"
   --output "$repo_root/generated/visibility.json" \
   --directions 16
 
-uv run --project "$repo_root" qbao estimate \
+python -m qbao.cli estimate \
   --input "$repo_root/generated/visibility.json" \
   --output "$repo_root/generated/results.json" \
   --budget 64 \
@@ -40,7 +45,7 @@ for method in exact monte_carlo qae; do
     --output "$repo_root/generated/render_${method}.png"
 done
 
-uv run --project "$repo_root" qbao compose \
+python -m qbao.cli compose \
   --exact "$repo_root/generated/render_exact.png" \
   --monte-carlo "$repo_root/generated/render_monte_carlo.png" \
   --qae "$repo_root/generated/render_qae.png" \

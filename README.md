@@ -13,15 +13,22 @@ numbers directly colour the tiles in the final render.
 
 ## Run it
 
-You need Blender 5.x and [`uv`](https://docs.astral.sh/uv/). On macOS:
+You need Blender 5.x and Conda. On macOS, Blender can be installed with Homebrew:
 
 ```bash
 brew install --cask blender
-brew install uv
-uv sync --extra dev
+conda env create --file environment.yml
+conda activate quantum-blender-ao
 ./scripts/check.sh
 ./scripts/run_demo.sh
 open generated/comparison.png
+```
+
+The environment is isolated from your other Python projects. If `environment.yml`
+changes later, update it with:
+
+```bash
+conda env update --file environment.yml --prune
 ```
 
 If Blender is not on your `PATH`, provide it explicitly:

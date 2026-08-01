@@ -7,13 +7,16 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v7
+      - uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: "3.13"
-          enable-cache: true
-      - run: uv sync --extra dev --locked
-      - run: uv run ruff check src tests
-      - run: uv run pytest
+          activate-environment: quantum-blender-ao
+          environment-file: environment.yml
+          auto-activate-base: false
+      - run: python -m ruff check src tests
+      - run: python -m pytest
       - run: python -m compileall -q blender
