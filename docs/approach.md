@@ -1,4 +1,4 @@
-# Course note
+# Approach
 
 ## The idea
 
@@ -46,10 +46,10 @@ Likewise, simulator time is not QPU time. A real-hardware extension should test 
 few representative probes and report device noise, transpilation, queue time, and QPU
 usage separately.
 
-## Presentation flow
+## How to read the results
 
-Show one probe and four directions, then the binary table. Explain the three estimators,
-reveal the three renders, and finish with the error and circuit-resource numbers from
-`generated/results.json`. The honest conclusion can be negative: this project explores
-where a quantum estimator could fit into graphics, not a claim that current hardware has
-already won.
+Start with one probe and four directions, then the binary table. Compare the three
+estimators, look at the three renders, and finish with the error and circuit-resource
+numbers from `generated/results.json`. The honest conclusion can be negative: this project
+explores where a quantum estimator could fit into graphics, not a claim that current
+hardware has already won.

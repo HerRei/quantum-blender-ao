@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "quantum-blender-ao"
 version = "0.1.0"
-description = "A course-sized Blender experiment comparing exact, Monte Carlo, and simulated-QAE ambient visibility"
+description = "A self-directed Blender experiment comparing exact, Monte Carlo, and simulated-QAE ambient visibility"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 authors = [{name = "Hermes Reisner"}]

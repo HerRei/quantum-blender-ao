@@ -1,4 +1,4 @@
-"""Build the reproducible Blender scene used by the course experiment."""
+"""Build the reproducible Blender scene used by the experiment."""
 
 from __future__ import annotations
 

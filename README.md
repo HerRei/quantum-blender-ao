@@ -1,8 +1,11 @@
 # Quantum-Assisted Ambient Occlusion in Blender
 
-This is a small quantum-computation course project with one simple question:
+A self-directed weekend experiment with one simple question:
 
 > Can a quantum estimator help us approximate how open or enclosed a point in a 3D scene is?
+
+I came across the idea in publicly available course material and thought it would be fun
+to build myself, so this is an independent implementation rather than coursework.
 
 Blender builds a little room and checks a handful of rays above each floor tile. The
 project then estimates the fraction of open rays in three ways: exactly, with classical
@@ -57,12 +60,12 @@ pretending that today's quantum tooling automatically improves graphics.
 blender/       scripts that create the room, cast rays, and render results
 src/qbao/      exact, Monte Carlo, and simulated-QAE estimators
 scripts/       one command to test, one command to run the demo
-docs/          a short explanation for the course presentation
+docs/          a short write-up of the approach and results
 tests/         small checks for the estimator and image pipeline
 ```
 
 For the maths, resource accounting, and honest limits of the experiment, read
-[the course note](docs/course-note.md).
+[the write-up](docs/approach.md).
 
 ## One important limitation
 
